@@ -23,9 +23,4 @@ from django.urls import include
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('SocietyHub.users.urls')),       # Root maps to users app
-    path('billing/', include('SocietyHub.billing.urls')),
-    path('complaints/', include('SocietyHub.complaints.urls')),
-    path('bookings/', include('SocietyHub.bookings.urls')),
-    path('visitors/', include('SocietyHub.visitors.urls')),
-    path('notices/', include('SocietyHub.notices.urls')),
 ]

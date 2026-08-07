@@ -42,3 +42,16 @@ class UserRegistrationForm(forms.ModelForm):
                 self.add_error('area_sqft', "Area in sqft is required for maintenance calculations.")
                 
         return cleaned_data
+
+    def save(self, commit=True):
+        user = super().save(commit=False)
+        full_name = self.cleaned_data.get('full_name')
+        if full_name:
+            names = full_name.split(' ', 1)
+            user.first_name = names[0]
+            if len(names) > 1:
+                user.last_name = names[1]
+        user.set_password(self.cleaned_data.get('password'))
+        if commit:
+            user.save()
+        return user

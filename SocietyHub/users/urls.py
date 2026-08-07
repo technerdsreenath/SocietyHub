@@ -1,6 +1,17 @@
 from django.urls import path
+from .views import login_view, register_view, logout_view
+from django.contrib.auth import views as auth_views
+from .views import admin_approvals_view, approve_user_view
 
 urlpatterns = [
-    # Add your path routes here later, e.g.:
-    # path('', views.home_view, name='home'),
+    path('login/', login_view, name='login'),
+    path('register/', register_view, name='register'),
+    path('logout/', logout_view, name='logout'),
+    path('password-reset/', auth_views.PasswordResetView.as_view(template_name='auth/password_reset.html'), name='password_reset'),
+    path('password-reset/done/', auth_views.PasswordResetDoneView.as_view(template_name='auth/password_reset_done.html'), name='password_reset_done'),
+    path('reset/<uidb64>/<token>/', auth_views.PasswordResetConfirmView.as_view(template_name='auth/password_reset_confirm.html'), name='password_reset_confirm'),
+    path('reset/done/', auth_views.PasswordResetCompleteView.as_view(template_name='auth/password_reset_complete.html'), name='password_reset_complete'),
+    # Approval Dashboard Routes
+    path('approvals/', admin_approvals_view, name='admin_approvals'),
+    path('approvals/approve/<int:profile_id>/', approve_user_view, name='approve_user'),
 ]

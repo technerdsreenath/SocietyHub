@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+
+{% block title %}Resident Dashboard - Society Hub{% endblock %}
+
+{% block page_title %}Resident Dashboard{% endblock %}
+
+{% block content %}
+<div class="space-y-8">
+    <!-- Welcome Header Cards -->
+    <div class="bg-gradient-to-r from-[#4F6D7A] to-[#3a525d] rounded-2xl p-6 text-white shadow-card flex flex-col md:flex-row justify-between items-start md:items-center gap-4 transition-all hover:shadow-lg">
+        <div>
+            <h2 class="text-xl font-bold">Welcome back, {% if user.get_full_name %}{{ user.get_full_name }}{% else %}{{ user.username }}{% endif %}!</h2>
+            <p class="text-xs text-white/80 mt-1">You are logged in to the resident portal of <strong class="text-white">{{ profile.society.name }}</strong> (Apartment: {{ profile.apartment_name }}).</p>
+        </div>
+        <div class="px-4 py-2 bg-white/10 rounded-xl backdrop-blur-md text-xs font-semibold flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
+            Profile Verified
+        </div>
+    </div>
+
+    <!-- Quick Actions Grid -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <a href="#" class="p-5 bg-portal-card border border-portal-border rounded-2xl shadow-card flex flex-col items-center justify-center text-center group hover:border-portal-primary hover:shadow-lg transition-all">
+            <div class="w-12 h-12 rounded-xl bg-portal-primary/10 text-portal-primary flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                <i data-lucide="credit-card" class="w-5 h-5"></i>
+            </div>
+            <span class="font-bold text-xs">Pay Maintenance</span>
+        </a>
+        <a href="#" class="p-5 bg-portal-card border border-portal-border rounded-2xl shadow-card flex flex-col items-center justify-center text-center group hover:border-portal-primary hover:shadow-lg transition-all">
+            <div class="w-12 h-12 rounded-xl bg-portal-secondary/10 text-portal-secondary flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                <i data-lucide="key-round" class="w-5 h-5"></i>
+            </div>
+            <span class="font-bold text-xs">Book Facilities</span>
+        </a>
+        <a href="#" class="p-5 bg-portal-card border border-portal-border rounded-2xl shadow-card flex flex-col items-center justify-center text-center group hover:border-portal-primary hover:shadow-lg transition-all">
+            <div class="w-12 h-12 rounded-xl bg-rose-50 text-rose-500 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                <i data-lucide="alert-triangle" class="w-5 h-5"></i>
+            </div>
+            <span class="font-bold text-xs">File Complaint</span>
+        </a>
+        <a href="#" class="p-5 bg-portal-card border border-portal-border rounded-2xl shadow-card flex flex-col items-center justify-center text-center group hover:border-portal-primary hover:shadow-lg transition-all">
+            <div class="w-12 h-12 rounded-xl bg-amber-50 text-amber-500 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                <i data-lucide="book-open" class="w-5 h-5"></i>
+            </div>
+            <span class="font-bold text-xs">View Directory</span>
+        </a>
+    </div>
+
+    <!-- Main Sections Split -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <!-- Left Side Column -->
+        <div class="lg:col-span-7 space-y-8">
+            <!-- Bills Card -->
+            <div class="bg-portal-card border border-portal-border rounded-2xl shadow-card overflow-hidden">
+                <div class="p-6 border-b border-portal-border flex justify-between items-center bg-[#FCFDFD]">
+                    <h3 class="font-bold text-sm text-portal-text flex items-center gap-2">
+                        <i data-lucide="receipt" class="w-4 h-4 text-portal-primary"></i>
+                        Recent Bills & Dues
+                    </h3>
+                    <a href="#" class="text-[11px] font-bold text-portal-primary hover:underline">View History</a>
+                </div>
+                <div class="divide-y divide-portal-border">
+                    {% for bill in bills %}
+                    <div class="p-5 flex justify-between items-center transition-colors hover:bg-portal-bg/40">
+                        <div class="space-y-1">
+                            <h4 class="font-bold text-xs text-portal-text">{{ bill.type }}</h4>
+                            <div class="flex items-center gap-2 text-[10px] text-portal-muted">
+                                <span>Bill ID: {{ bill.id }}</span>
+                                <span>•</span>
+                                <span>Due: {{ bill.due_date }}</span>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-4">
+                            <span class="font-bold text-xs text-portal-text">{{ bill.amount }}</span>
+                            <span class="px-2.5 py-1 rounded-full text-[10px] font-semibold {{ bill.status_color }}">
+                                {{ bill.status }}
+                            </span>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <p class="p-6 text-center text-xs text-portal-muted font-medium">No bills found.</p>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Facility Bookings Card -->
+            <div class="bg-portal-card border border-portal-border rounded-2xl shadow-card overflow-hidden">
+                <div class="p-6 border-b border-portal-border flex justify-between items-center bg-[#FCFDFD]">
+                    <h3 class="font-bold text-sm text-portal-text flex items-center gap-2">
+                        <i data-lucide="calendar" class="w-4 h-4 text-portal-primary"></i>
+                        My Bookings
+                    </h3>
+                    <a href="#" class="text-[11px] font-bold text-portal-primary hover:underline">New Booking</a>
+                </div>
+                <div class="p-4 space-y-3">
+                    {% for booking in bookings %}
+                    <div class="p-4 border border-portal-border rounded-xl flex justify-between items-center hover:shadow-sm transition-shadow">
+                        <div class="space-y-1">
+                            <h4 class="font-bold text-xs text-portal-text">{{ booking.facility }}</h4>
+                            <div class="flex items-center gap-2 text-[10px] text-portal-muted">
+                                <i data-lucide="clock" class="w-3 h-3"></i>
+                                <span>{{ booking.date }} | {{ booking.time }}</span>
+                            </div>
+                        </div>
+                        <span class="px-2.5 py-1 border rounded-lg text-[10px] font-bold {{ booking.status_class }}">
+                            {{ booking.status }}
+                        </span>
+                    </div>
+                    {% empty %}
+                    <p class="p-6 text-center text-xs text-portal-muted font-medium">No bookings made.</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Side Column -->
+        <div class="lg:col-span-5 space-y-8">
+            <!-- Notices Card -->
+            <div class="bg-portal-card border border-portal-border rounded-2xl shadow-card overflow-hidden">
+                <div class="p-6 border-b border-portal-border flex justify-between items-center bg-[#FCFDFD]">
+                    <h3 class="font-bold text-sm text-portal-text flex items-center gap-2">
+                        <i data-lucide="megaphone" class="w-4 h-4 text-portal-primary"></i>
+                        Notice Board
+                    </h3>
+                    <a href="#" class="text-[11px] font-bold text-portal-primary hover:underline">View All</a>
+                </div>
+                <div class="p-6 space-y-5">
+                    {% for notice in notices %}
+                    <div class="space-y-2 border-b border-portal-border last:border-b-0 pb-4 last:pb-0">
+                        <div class="flex justify-between items-start gap-2">
+                            <h4 class="font-bold text-xs text-portal-text leading-snug">{{ notice.title }}</h4>
+                            <span class="shrink-0 px-2 py-0.5 rounded text-[9px] font-extrabold tracking-wider uppercase {% if notice.priority == 'High' %}bg-rose-50 text-rose-600{% elif notice.priority == 'Medium' %}bg-amber-50 text-amber-600{% else %}bg-green-50 text-green-600{% endif %}">
+                                {{ notice.priority }}
+                            </span>
+                        </div>
+                        <p class="text-[11px] text-portal-muted leading-relaxed font-medium">
+                            {{ notice.content }}
+                        </p>
+                        <div class="flex items-center justify-between text-[10px] text-portal-muted font-semibold pt-1">
+                            <span class="px-2 py-0.5 bg-portal-bg border border-portal-border rounded">{{ notice.category }}</span>
+                            <span>{{ notice.date }}</span>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <p class="p-6 text-center text-xs text-portal-muted font-medium">No active notices.</p>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Complaints Card -->
+            <div class="bg-portal-card border border-portal-border rounded-2xl shadow-card overflow-hidden">
+                <div class="p-6 border-b border-portal-border flex justify-between items-center bg-[#FCFDFD]">
+                    <h3 class="font-bold text-sm text-portal-text flex items-center gap-2">
+                        <i data-lucide="message-square" class="w-4 h-4 text-portal-primary"></i>
+                        My Complaints
+                    </h3>
+                    <a href="#" class="text-[11px] font-bold text-portal-primary hover:underline">File New</a>
+                </div>
+                <div class="p-4 space-y-3">
+                    {% for complaint in complaints %}
+                    <div class="p-4 border border-portal-border rounded-xl flex justify-between items-center hover:bg-portal-bg/20 transition-colors">
+                        <div class="space-y-1">
+                            <h4 class="font-bold text-xs text-portal-text">{{ complaint.title }}</h4>
+                            <div class="flex items-center gap-2 text-[10px] text-portal-muted">
+                                <span>ID: {{ complaint.id }}</span>
+                                <span>•</span>
+                                <span>Filed: {{ complaint.date }}</span>
+                            </div>
+                        </div>
+                        <span class="px-2 py-0.5 rounded text-[10px] font-bold {{ complaint.status_class }}">
+                            {{ complaint.status }}
+                        </span>
+                    </div>
+                    {% empty %}
+                    <p class="p-6 text-center text-xs text-portal-muted font-medium">No complaints filed.</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block title %}Maintenance Staff Dashboard - Society Hub{% endblock %}
+
+{% block page_title %}Maintenance Staff Portal{% endblock %}
+
+{% block content %}
+<div class="space-y-8">
+    <!-- Header Block -->
+    <div class="bg-gradient-to-r from-blue-800 to-blue-950 rounded-2xl p-6 text-white shadow-card flex flex-col md:flex-row justify-between items-start md:items-center gap-4 hover:shadow-lg transition-all">
+        <div>
+            <h2 class="text-xl font-bold">Maintenance & Staff Operations</h2>
+            <p class="text-xs text-white/80 mt-1">Manage maintenance jobs, repairs, and check daily checklists for <strong class="text-white">{{ profile.society.name }}</strong>.</p>
+        </div>
+        <div class="px-3.5 py-1.5 bg-white/10 rounded-xl text-xs font-semibold flex items-center gap-2">
+            <i data-lucide="check-square" class="w-4 h-4"></i>
+            Staff Duty Mode
+        </div>
+    </div>
+
+    <!-- Task List Area -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <!-- Task List (Left) -->
+        <div class="lg:col-span-8 space-y-8">
+            <div class="bg-portal-card border border-portal-border rounded-2xl shadow-card overflow-hidden">
+                <div class="p-6 border-b border-portal-border flex justify-between items-center bg-[#FCFDFD]">
+                    <h3 class="font-bold text-sm text-portal-text flex items-center gap-2">
+                        <i data-lucide="list-todo" class="w-4 h-4 text-portal-primary"></i>
+                        My Assigned Tasks
+                    </h3>
+                    <span class="px-2.5 py-0.5 bg-blue-50 text-blue-700 text-[10px] font-bold rounded-full">Today's Jobs</span>
+                </div>
+                <div class="divide-y divide-portal-border">
+                    {% for task in tasks %}
+                    <div class="p-5 flex justify-between items-center hover:bg-portal-bg/20 transition-colors">
+                        <div class="space-y-1.5">
+                            <div class="flex items-center gap-2.5">
+                                <h4 class="font-bold text-xs text-portal-text">{{ task.title }}</h4>
+                                <span class="px-2 py-0.5 bg-portal-bg border border-portal-border text-portal-muted text-[9px] font-semibold rounded">{{ task.id }}</span>
+                                <span class="px-2 py-0.5 rounded text-[9px] font-extrabold uppercase tracking-wider {% if task.priority == 'High' %}bg-rose-50 text-rose-600{% else %}bg-green-50 text-green-600{% endif %}">
+                                    {{ task.priority }} Priority
+                                </span>
+                            </div>
+                            <div class="flex items-center gap-3 text-[10px] text-portal-muted font-medium">
+                                <span class="flex items-center gap-1">
+                                    <i data-lucide="map-pin" class="w-3 h-3 text-portal-primary"></i>
+                                    {{ task.location }}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <span class="px-2.5 py-0.5 text-[10px] font-bold {{ task.status_color }} rounded-full">
+                                {{ task.status }}
+                            </span>
+                            {% if task.status != "Completed" %}
+                            <button class="px-3 py-1.5 bg-portal-primary hover:bg-portal-primary/95 text-white rounded-xl text-[10px] font-bold transition-all shadow-sm" onclick="alert('Task completion recorded mock action successful!')">
+                                Mark Done
+                            </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% empty %}
+                    <p class="p-6 text-center text-xs text-portal-muted font-medium">No tasks assigned today.</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Task Guidelines (Right) -->
+        <div class="lg:col-span-4 space-y-8">
+            <div class="bg-portal-card border border-portal-border rounded-2xl shadow-card p-6 space-y-4">
+                <h3 class="font-bold text-sm text-portal-text flex items-center gap-2 border-b border-portal-border pb-3">
+                    <i data-lucide="info" class="w-4 h-4 text-portal-primary"></i>
+                    Staff Guidelines
+                </h3>
+                <ul class="text-[11px] text-portal-muted space-y-2 list-disc list-inside font-medium leading-relaxed">
+                    <li>Please wear your uniform and identity card during work hours.</li>
+                    <li>Update the status of tasks in real-time using this dashboard.</li>
+                    <li>Take pictures of the repair and notify the Secretary after closing high priority tasks.</li>
+                    <li>Contact Security at Gate 1 for any emergency situations.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

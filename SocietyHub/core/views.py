@@ -14,7 +14,7 @@ def portal_dashboard(request):
         })
 
     # If the user's profile is not approved yet
-    if not profile.is_society_approved:
+    if not profile.is_approved:
         return render(request, 'auth/pending_approval.html', {'profile': profile})
 
     role = profile.role

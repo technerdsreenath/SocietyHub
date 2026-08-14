@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+
+{% block title %}Secretary Approvals - Society Hub{% endblock %}
+
+{% block page_title %}Secretary Approvals{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto space-y-8">
+    <!-- Header Summary Card -->
+    <div class="bg-gradient-to-r from-teal-800 to-teal-950 rounded-2xl p-6 text-white shadow-card flex flex-col md:flex-row justify-between items-start md:items-center gap-4 hover:shadow-lg transition-shadow">
+        <div>
+            <h2 class="text-xl font-bold">Committee Registrations</h2>
+            <p class="text-xs text-white/80 mt-1">Review new secretary sign-up requests for <strong>{{ profile.society.name }}</strong> before granting committee access.</p>
+        </div>
+        <div class="px-3 py-1 bg-white/10 rounded-xl text-xs font-semibold flex items-center gap-1.5">
+            <i data-lucide="shield-check" class="w-4 h-4"></i>
+            Chairperson Authorization
+        </div>
+    </div>
+
+    <!-- Approvals List -->
+    <div class="bg-portal-card border border-portal-border rounded-2xl shadow-card overflow-hidden">
+        <div class="p-6 border-b border-portal-border flex justify-between items-center bg-[#FCFDFD]">
+            <h3 class="font-bold text-sm text-portal-text flex items-center gap-2">
+                <i data-lucide="user-plus" class="w-4 h-4 text-portal-primary"></i>
+                Secretary Verification Queue
+            </h3>
+            <span class="px-2 py-0.5 bg-amber-50 text-amber-700 text-[10px] font-bold rounded-full">Requires Authorisation</span>
+        </div>
+
+        <div class="divide-y divide-portal-border">
+            {% for sec in pending_secretaries %}
+            <div class="p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6 hover:bg-portal-bg/20 transition-all">
+                <div class="space-y-2">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-8 h-8 rounded-full bg-portal-primary/10 text-portal-primary font-bold flex items-center justify-center text-xs">
+                            {{ sec.user.username|make_list|first|upper }}
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-sm text-portal-text">
+                                {% if sec.user.get_full_name %}{{ sec.user.get_full_name }}{% else %}{{ sec.user.username }}{% endif %}
+                            </h4>
+                            <p class="text-[10px] text-portal-muted font-medium mt-0.5">Username: @{{ sec.user.username }} • Email: {{ sec.user.email }}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-x-6 gap-y-1 text-xs pl-10">
+                        <div class="flex items-center gap-1.5 text-portal-muted col-span-2">
+                            <i data-lucide="phone" class="w-3.5 h-3.5"></i>
+                            <span>Contact: <strong class="text-portal-text font-semibold">{{ sec.contact }}</strong></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="flex items-center gap-2 pl-10 sm:pl-0">
+                    <form action="{% url 'approve_secretary' sec.id %}" method="POST" class="inline">
+                        {% csrf_token %}
+                        <button type="submit" class="px-4 py-2 bg-portal-primary hover:bg-portal-primary/95 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-1.5">
+                            <i data-lucide="check" class="w-3.5 h-3.5"></i>
+                            Approve
+                        </button>
+                    </form>
+                    <form action="{% url 'reject_secretary' sec.id %}" method="POST" class="inline">
+                        {% csrf_token %}
+                        <button type="submit" onclick="return confirm('Are you sure you want to reject and delete this secretary request?')" class="px-4 py-2 bg-red-50 hover:bg-red-100/70 text-red-600 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5">
+                            <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                            Reject
+                        </button>
+                    </form>
+                </div>
+            </div>
+            {% empty %}
+            <div class="p-12 text-center space-y-3">
+                <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-green-50 text-green-500">
+                    <i data-lucide="check-circle-2" class="w-6 h-6"></i>
+                </div>
+                <div class="space-y-1">
+                    <h4 class="font-bold text-sm text-portal-text">All Clear!</h4>
+                    <p class="text-xs text-portal-muted">No secretary registrations are currently pending verification.</p>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

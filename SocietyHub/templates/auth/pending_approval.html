@@ -3,49 +3,71 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pending Approvals - Admin Portal</title>
+    <title>Approval Pending - Society Hub</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        portal: {
+                            primary: '#4F6D7A',
+                            secondary: '#84A98C',
+                            bg: '#F8F9FA',
+                            card: '#FFFFFF',
+                            text: '#2F3E46',
+                            border: '#DDE5E8',
+                            muted: '#6C7A89'
+                        }
+                    },
+                    fontFamily: { sans: ['Inter', 'sans-serif'] }
+                }
+            }
+        }
+    </script>
 </head>
-<body class="font-sans text-[#2F3E46] bg-[#F8F9FA] p-8">
-    <div class="max-w-5xl mx-auto bg-white border border-[#DDE5E8] rounded-2xl shadow-sm p-6">
-        <h1 class="font-bold text-lg mb-1">Resident & Society Approvals</h1>
-        <p class="text-xs text-[#6C7A89] mb-6">Review pending registrations and grant platform access.</p>
+<body class="h-full font-sans text-portal-text bg-portal-bg flex items-center justify-center p-4">
+    <div class="max-w-md w-full bg-portal-card border border-portal-border rounded-3xl shadow-xl p-8 text-center space-y-6">
+        <!-- Pulse Icon -->
+        <div class="flex justify-center">
+            <div class="relative flex items-center justify-center w-20 h-20 rounded-full bg-amber-50 text-amber-500 animate-pulse">
+                <i data-lucide="clock" class="w-10 h-10"></i>
+            </div>
+        </div>
 
-        <div class="overflow-x-auto">
-            <table class="w-full text-left text-sm">
-                <thead>
-                    <tr class="border-b border-[#DDE5E8] text-xs uppercase text-[#6C7A89]">
-                        <th class="pb-3">Username</th>
-                        <th class="pb-3">Society</th>
-                        <th class="pb-3">Role</th>
-                        <th class="pb-3">Apartment / Contact</th>
-                        <th class="pb-3 text-right">Actions</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-[#DDE5E8]">
-                    {% for profile in pending_profiles %}
-                    <tr class="py-3">
-                        <td class="py-3 font-semibold">{{ profile.user.username }}</td>
-                        <td class="py-3">{{ profile.society }}</td>
-                        <td class="py-3"><span class="px-2.5 py-1 bg-gray-100 rounded-full text-xs font-bold">{{ profile.role }}</span></td>
-                        <td class="py-3 text-xs text-[#6C7A89]">{{ profile.apartment_name }}<br>{{ profile.contact }}</td>
-                        <td class="py-3 text-right">
-                            <form action="{% url 'approve_user' profile.id %}" method="POST">
-                                {% csrf_token %}
-                                <button type="submit" class="bg-[#4F6D7A] hover:bg-[#4F6D7A]/90 text-white font-bold px-4 py-2 rounded-xl text-xs transition-all">
-                                    Approve
-                                </button>
-                            </form>
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="5" class="py-8 text-center text-sm text-[#6C7A89]">No pending approvals found. Everything is up to date!</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+        <div class="space-y-2">
+            <h2 class="text-2xl font-bold text-portal-text">Approval Pending</h2>
+            <p class="text-sm text-portal-muted">
+                Thank you for registering with <strong>{{ profile.society.name }}</strong>! 
+                Your role request as <strong class="capitalize">{{ profile.role }}</strong> has been recorded.
+            </p>
+        </div>
+
+        <div class="p-4 bg-portal-bg/50 border border-portal-border rounded-2xl text-left space-y-2">
+            <h4 class="text-xs font-bold text-portal-text uppercase tracking-wider">What happens next?</h4>
+            <ul class="text-xs text-portal-muted list-disc list-inside space-y-1">
+                <li>Your society committee (Chairperson/Secretary) will verify your details.</li>
+                <li>Once approved, you will gain full access to the portal features.</li>
+                <li>In case of delay, please contact your committee members directly.</li>
+            </ul>
+        </div>
+
+        <div class="pt-4 flex flex-col gap-2">
+            <a href="{% url 'portal_dashboard' %}" class="flex items-center justify-center gap-2 w-full px-5 py-3 bg-portal-primary hover:bg-portal-primary/95 text-white font-bold rounded-2xl text-sm transition-all shadow-md">
+                <i data-lucide="rotate-cw" class="w-4 h-4"></i>
+                Check Status Again
+            </a>
+            <a href="{% url 'logout' %}" class="flex items-center justify-center gap-2 w-full px-5 py-3 bg-red-50 hover:bg-red-100/70 text-red-600 font-bold rounded-2xl text-sm transition-all">
+                <i data-lucide="log-out" class="w-4 h-4"></i>
+                Sign Out
+            </a>
         </div>
     </div>
+
+    <script>
+        lucide.createIcons();
+    </script>
 </body>
 </html>

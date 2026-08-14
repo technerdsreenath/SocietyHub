@@ -9,6 +9,6 @@ class SocietyAdmin(admin.ModelAdmin):
 
 @admin.register(UserProfile)
 class UserProfileAdmin(admin.ModelAdmin):
-    list_display = ('user', 'society', 'role', 'contact', 'is_society_approved')
-    list_filter = ('role', 'is_society_approved', 'society')
+    list_display = ('user', 'society', 'role', 'contact', 'is_approved')
+    list_filter = ('role', 'is_approved', 'society')
     search_fields = ('user__username', 'user__first_name', 'user__last_name', 'contact')

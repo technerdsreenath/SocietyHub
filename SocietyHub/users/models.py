@@ -32,7 +32,7 @@ class UserProfile(models.Model):
     area_sqft = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
     
     # Approval status within the society (Approved by Chairperson/Secretary)
-    is_society_approved = models.BooleanField(default=False)
+    is_approved = models.BooleanField(default=False)
 
     def __str__(self):
         return f"{self.user.get_full_name()} ({self.get_role_display()}) - {self.society}"

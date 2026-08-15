@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-portal-bg">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Profile - Society Hub</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script> <!-- or your Tailwind script setup -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        portal: {
+                            primary: '#4F6D7A',
+                            secondary: '#84A98C',
+                            bg: '#F8F9FA',
+                            card: '#FFFFFF',
+                            text: '#2F3E46',
+                            border: '#DDE5E8',
+                            muted: '#6C7A89'
+                        }
+                    },
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    boxShadow: { 'card': '0 4px 16px -4px rgba(47, 62, 70, 0.06)' }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="min-h-full font-sans text-portal-text bg-portal-bg flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
+    <div class="w-full max-w-xl bg-portal-card rounded-2xl shadow-card border border-portal-border p-6 sm:p-8">
+        
+        <!-- Header -->
+        <div class="flex items-center justify-between mb-6 pb-4 border-b border-portal-border">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-portal-primary flex items-center justify-center text-white shadow-flat">
+                    <i data-lucide="user-pen" class="w-5 h-5"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-portal-text text-base tracking-tight">Edit Profile</h1>
+                    <p class="text-xs text-portal-muted font-medium">Role: <span class="capitalize text-portal-primary font-bold">{{ profile.get_role_display }}</span></p>
+                </div>
+            </div>
+            <a href="{% url 'portal_dashboard' %}" class="text-xs font-bold text-portal-muted hover:text-portal-primary flex items-center gap-1 transition-all">
+                <i data-lucide="arrow-left" class="w-4 h-4"></i> Back
+            </a>
+        </div>
+
+        <form method="POST" class="space-y-4">
+            {% csrf_token %}
+            
+            {% if form.errors %}
+                <div class="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-800 font-semibold">
+                    Please correct the errors below.
+                </div>
+            {% endif %}
+
+            {{ form.non_field_errors }}
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <!-- Common Fields -->
+                <div class="sm:col-span-2">
+                    <label class="block text-[10px] font-bold uppercase text-portal-muted mb-1.5">{{ form.full_name.label }}</label>
+                    {{ form.full_name }}
+                    {% if form.full_name.errors %}<p class="text-[11px] text-red-600 mt-1 font-medium">{{ form.full_name.errors.0 }}</p>{% endif %}
+                </div>
+
+                <div class="sm:col-span-2">
+                    <label class="block text-[10px] font-bold uppercase text-portal-muted mb-1.5">{{ form.email.label }}</label>
+                    {{ form.email }}
+                    {% if form.email.errors %}<p class="text-[11px] text-red-600 mt-1 font-medium">{{ form.email.errors.0 }}</p>{% endif %}
+                </div>
+
+                <!-- Locked Society Field -->
+                <div class="sm:col-span-2">
+                    <label class="block text-[10px] font-bold uppercase text-portal-muted mb-1.5">{{ form.society_name.label }} (Locked)</label>
+                    {{ form.society_name }}
+                    <p class="text-[10px] text-portal-muted mt-1">Assigned community cannot be modified directly.</p>
+                </div>
+
+                <!-- Role-Specific Fields: Resident -->
+                {% if profile.role == 'resident' %}
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase text-portal-muted mb-1.5">{{ form.wing.label }}</label>
+                        {{ form.wing }}
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase text-portal-muted mb-1.5">{{ form.flat_number.label }}</label>
+                        {{ form.flat_number }}
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase text-portal-muted mb-1.5">{{ form.flat_name.label }}</label>
+                        {{ form.flat_name }}
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase text-portal-muted mb-1.5">{{ form.area_sqft.label }}</label>
+                        {{ form.area_sqft }}
+                    </div>
+                <!-- Role-Specific Fields: Secretary -->
+                {% elif profile.role == 'secretary' %}
+                    <div class="sm:col-span-2">
+                        <label class="block text-[10px] font-bold uppercase text-portal-muted mb-1.5">{{ form.wing.label }}</label>
+                        {{ form.wing }}
+                    </div>
+                {% endif %}
+
+                <!-- Contact Number -->
+                <div class="sm:col-span-2">
+                    <label class="block text-[10px] font-bold uppercase text-portal-muted mb-1.5">{{ form.contact.label }}</label>
+                    {{ form.contact }}
+                    {% if form.contact.errors %}<p class="text-[11px] text-red-600 mt-1 font-medium">{{ form.contact.errors.0 }}</p>{% endif %}
+                </div>
+            </div>
+
+            <button type="submit" class="w-full bg-portal-primary hover:bg-portal-primary/90 text-white font-bold py-3 rounded-xl text-xs shadow-flat transition-all mt-4">
+                Save Changes
+            </button>
+        </form>
+    </div>
+
+    <script>
+        lucide.createIcons();
+        // Automatically inject portal class styling to Django form widgets
+        document.querySelectorAll('input, select, textarea').forEach(el => {
+            if (el.type !== 'hidden' && !el.classList.contains('form-control')) {
+                el.className = 'w-full bg-portal-bg border border-portal-border rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-portal-primary/20 focus:border-portal-primary';
+            }
+        });
+    </script>
+</body>
+</html>

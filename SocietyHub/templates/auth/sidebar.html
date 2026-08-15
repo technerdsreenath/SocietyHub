@@ -1,0 +1,17 @@
+<!-- templates/_profile_card.html -->
+<a href="{% url 'profile_edit' %}" class="flex items-center gap-3 border-t border-portal-border p-4 mt-auto hover:bg-portal-bg/50 transition-colors group block text-decoration-none">
+    <div class="w-10 h-10 rounded-xl bg-portal-primary text-white font-bold flex items-center justify-center group-hover:scale-105 transition-transform">
+        {{ request.user.username|slice:":1"|upper }}
+    </div>
+    <div class="overflow-hidden flex-1">
+        <div class="font-bold text-portal-text text-sm truncate group-hover:text-portal-primary transition-colors">
+            {{ request.user.get_full_name|default:request.user.username }}
+        </div>
+        <div class="text-[11px] text-portal-muted truncate font-medium">
+            {{ request.user.email }}
+        </div>
+    </div>
+    <div class="text-portal-muted group-hover:text-portal-primary transition-colors">
+        <i data-lucide="chevron-right" class="w-4 h-4"></i>
+    </div>
+</a>

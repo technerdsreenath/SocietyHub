@@ -1,18 +1,26 @@
-from django.contrib.auth import login, logout
-from django.contrib.auth.forms import AuthenticationForm
-from django.shortcuts import render, redirect, get_object_or_404
-from .forms import UserRegistrationForm
-from .models import UserProfile
-from django.contrib.admin.views.decorators import staff_member_required
-from django.contrib.auth.decorators import login_required
-from django.contrib.auth.views import LoginView
-from django.urls import reverse_lazy
-from django.http import HttpResponseForbidden
-from django.contrib.auth.models import User
-from .models import Society
-from django.core.mail import send_mail
-from django.conf import settings
 import logging
+
+from django.conf import settings
+from django.contrib.admin.views.decorators import staff_member_required
+from django.contrib.auth import login, logout
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.forms import AuthenticationForm
+from django.contrib.auth.models import User
+from django.contrib.auth.views import LoginView
+from django.core.mail import send_mail
+from django.http import HttpResponseForbidden
+from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse_lazy
+
+from .forms import (
+    SecretaryRegistrationForm,
+    SocietyAndChairpersonForm,
+    UserRegistrationForm,
+    UserProfileEditForm,
+)
+from .models import Society, UserProfile
+from django.db import transaction
+
 
 logger = logging.getLogger(__name__)
 
@@ -249,27 +257,110 @@ def register_view(request):
     if request.method == 'POST':
         form = UserRegistrationForm(request.POST)
         if form.is_valid():
-            user = form.save()
-            
+            # 1. Save user securely with hashed password if not already handled in form.save()
+            user = form.save(commit=False)
+            password = form.cleaned_data.get('password')
+            user.set_password(password)  # Crucial for proper authentication!
+            user.save()
+
+            # 2. Match form's 'flat_name' field correctly
             UserProfile.objects.create(
                 user=user,
                 society=form.cleaned_data.get('society'),
                 role=form.cleaned_data.get('role'),
                 contact=form.cleaned_data.get('contact'),
-                apartment_name=form.cleaned_data.get('apartment_name', ''),
+                flat_name=form.cleaned_data.get('flat_name', ''),  # Fixed from apartment_name
                 area_sqft=form.cleaned_data.get('area_sqft', None),
                 is_approved=False
             )
             return redirect('login')
     else:
         form = UserRegistrationForm()
-        
+
     return render(request, 'auth/register.html', {'form': form})
+
+from django.db import transaction
+
+def register_society_view(request):
+    if request.method == 'POST':
+        form = SocietyAndChairpersonForm(request.POST)
+        if form.is_valid():
+            with transaction.atomic():
+                # 1. Create the Society (Pending Superadmin Approval)
+                society = Society.objects.create(
+                    name=form.cleaned_data['society_name'],
+                    area=form.cleaned_data['area'],
+                    total_wings=form.cleaned_data['total_wings'],
+                    is_approved=False
+                )
+                
+                # 2. Create the Chairperson User (Secures password hashing)
+                user = User.objects.create_user(
+                    username=form.cleaned_data['username'],
+                    email=form.cleaned_data['email'],
+                    password=form.cleaned_data['password']
+                )
+                
+                # 3. Create Chairperson Profile linked to the Society
+                UserProfile.objects.create(  # Fixed from Profile to UserProfile
+                    user=user,
+                    role='chairperson',
+                    society=society,
+                    is_approved=False
+                )
+            return redirect('login')
+    else:
+        form = SocietyAndChairpersonForm()
+    return render(request, 'auth/register_society.html', {'form': form})
+
+
+def register_secretary_view(request):
+    if request.method == 'POST':
+        form = SecretaryRegistrationForm(request.POST)
+        if form.is_valid():
+            with transaction.atomic():
+                user = User.objects.create_user(
+                    username=form.cleaned_data['username'],
+                    email=form.cleaned_data['email'],
+                    password=form.cleaned_data['password']
+                )
+                UserProfile.objects.create(  # Fixed from Profile to UserProfile
+                    user=user,
+                    role='secretary',
+                    society=form.cleaned_data['society'],
+                    wing=form.cleaned_data['wing'],
+                    is_approved=False
+                )
+            return redirect('login')
+    else:
+        form = SecretaryRegistrationForm()
+    return render(request, 'auth/register_secretary.html', {'form': form})
+
 
 def logout_view(request):
     logout(request)
     return redirect('login')
+@login_required
+def profile_edit_view(request):
+    profile = get_object_or_404(UserProfile, user=request.user)
+    if request.method == 'POST':
+        form = UserProfileEditForm(request.POST, instance=profile)
+        if form.is_valid():
+            user = request.user
+            full_name = form.cleaned_data.get('full_name')
+            if full_name:
+                names = full_name.split(' ', 1)
+                user.first_name = names[0]
+                user.last_name = names[1] if len(names) > 1 else ''
+            user.email = form.cleaned_data.get('email')
+            user.save()
 
+            form.save()
+            return redirect('portal_dashboard')
+    else:
+        form = UserProfileEditForm(instance=profile)
+
+    return render(request, 'auth/edit_profile.html', {'form': form, 'profile': profile})
 @staff_member_required
 def admin_approvals_view(request):
     # Fetch all user profiles awaiting approval

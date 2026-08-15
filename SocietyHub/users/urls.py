@@ -8,12 +8,17 @@ from .views import (
     approve_secretary, reject_secretary, secretary_approvals_view,
     approve_resident, reject_resident
 )
+from django.urls import path, include
 
 urlpatterns = [
     path('login/', CustomLoginView.as_view(), name='login'),
     path('register/', register_view, name='register'),
     path('logout/', logout_view, name='logout'),
-    
+    # ... your existing paths ...
+    path('register-society/', views.register_society_view, name='register_society'),
+    path('register-secretary/', views.register_secretary_view, name='register_secretary'), # Good to add this too!
+    path('profile/edit/', views.profile_edit_view, name='profile_edit'),
+
     # Password Reset Routes
     path('password-reset/', auth_views.PasswordResetView.as_view(template_name='auth/password_reset.html'), name='password_reset'),
     path('password-reset/done/', auth_views.PasswordResetDoneView.as_view(template_name='auth/password_reset_done.html'), name='password_reset_done'),

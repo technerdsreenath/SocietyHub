@@ -45,6 +45,8 @@ urlpatterns = [
     path('secretary/approvals/', views.secretary_approvals_view, name='secretary_approvals'),
     path('resident/<int:pk>/approve/', views.approve_resident, name='approve_resident'),
     path('resident/<int:pk>/reject/', views.reject_resident, name='reject_resident'),
+    path('secretary/notices/', views.secretary_notices_view, name='secretary_notices'),
+    path('secretary/dashboard/', views.secretary_approvals_view, name='secretary_dashboard'),
 ]
 
 

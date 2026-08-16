@@ -1,6 +1,7 @@
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.http import Http404
+from SocietyHub.users.models import UserProfile,Notice
 
 @login_required(login_url='login')
 def portal_dashboard(request):
@@ -20,6 +21,9 @@ def portal_dashboard(request):
     role = profile.role
     context = {'profile': profile}
 
+    # Fetch real notices from the database for this society once
+    society_notices = Notice.objects.filter(society=profile.society).order_by('-created_at')
+
     if role == 'resident':
         # Add rich mock data for resident dashboard
         context.update({
@@ -28,11 +32,7 @@ def portal_dashboard(request):
                 {'id': 'B-101', 'type': 'Clubhouse Booking Charge', 'amount': '₹1,500', 'due_date': 'Paid on Aug 01', 'status': 'Paid', 'status_color': 'text-green-600 bg-green-50'},
                 {'id': 'B-099', 'type': 'Water & Utility surcharge', 'amount': '₹750', 'due_date': 'Paid on Jul 15', 'status': 'Paid', 'status_color': 'text-green-600 bg-green-50'},
             ],
-            'notices': [
-                {'title': 'Annual General Body Meeting (AGM)', 'date': 'Aug 12, 2026', 'priority': 'High', 'category': 'General', 'content': 'The AGM of Society Hub is scheduled on August 20th at 10:00 AM at the Clubhouse. Attendance is mandatory.'},
-                {'title': 'Water Tank Cleaning Schedule', 'date': 'Aug 09, 2026', 'priority': 'Medium', 'category': 'Maintenance', 'content': 'Water supply will be suspended on Sunday from 9:00 AM to 3:00 PM for biannual water tank cleaning and purification.'},
-                {'title': 'Independence Day Celebration', 'date': 'Aug 05, 2026', 'priority': 'Low', 'category': 'Social', 'content': 'Flag hoisting ceremony will be conducted at 8:30 AM on August 15th near the central lawn, followed by cultural events.'},
-            ],
+            'notices': society_notices,  # <--- CHANGED: Replaced mock list with database queryset
             'bookings': [
                 {'facility': 'Clubhouse Hall', 'date': 'Aug 15, 2026', 'time': '10:00 AM - 4:00 PM', 'status': 'Confirmed', 'status_class': 'text-green-600 border-green-200 bg-green-50'},
                 {'facility': 'Tennis Court 2', 'date': 'Aug 08, 2026', 'time': '7:00 AM - 8:30 AM', 'status': 'Pending Approval', 'status_class': 'text-amber-600 border-amber-200 bg-amber-50'},
@@ -45,28 +45,35 @@ def portal_dashboard(request):
         return render(request, 'resident/dashboard.html', context)
 
     elif role == 'secretary':
-        # Add mock data for secretary dashboard
+        # Fetch real pending approvals for this society from the database
+        pending_profiles = UserProfile.objects.filter(
+            role__in=['resident', 'security', 'maintenance'], 
+            society=profile.society, 
+            is_approved=False
+        ).select_related('user')
+
+        # Fetch real notices from the database for this society
+        society_notices = Notice.objects.filter(society=profile.society).order_by('-created_at')
+
+        # If you have a Complaint model, replace this with: Complaint.objects.filter(society=profile.society, status!='Resolved').count()
+        # For now, we set it to 0 or query your actual Complaint model if available:
+        active_complaints_count = 0  # Change to your real query if you have a Complaint model
+
         context.update({
-            'pending_approvals_count': 3,
-            'open_complaints_count': 5,
-            'active_notices_count': 4,
-            'approvals': [
-                {'name': 'Vikram Aditya', 'apartment': 'Block A-402', 'contact': '+91 98765 43210', 'role': 'Resident'},
-                {'name': 'Shalini Sen', 'apartment': 'Block C-704', 'contact': '+91 87654 32109', 'role': 'Resident'},
-                {'name': 'Ramesh Kumar', 'apartment': 'Gate 1', 'contact': '+91 76543 21098', 'role': 'Security Guard'},
-            ],
-            'complaints': [
-                {'id': 'C-4895', 'title': 'Elevator B squeaking sound', 'apartment': 'Block B-202', 'category': 'Lift Maintenance', 'status': 'In Progress'},
-                {'id': 'C-4896', 'title': 'Water leakage from ceiling', 'apartment': 'Block D-501', 'category': 'Plumbing', 'status': 'Open'},
-            ],
-            'notices': [
-                {'title': 'Annual General Body Meeting (AGM)', 'date': 'Aug 12, 2026', 'status': 'Published'},
-                {'title': 'Water Tank Cleaning Schedule', 'date': 'Aug 09, 2026', 'status': 'Published'},
-            ]
+            'pending_count': pending_profiles.count(),
+            'pending_approvals_count': pending_profiles.count(),
+            'pending_profiles': pending_profiles,
+            'approvals': pending_profiles,
+            'active_complaints_count': active_complaints_count,
+            'active_notices_count': society_notices.count(),
+            'notices': society_notices[:2],  # Shows recent notices dynamically on the dashboard
         })
         return render(request, 'secretary/dashboard.html', context)
+    
+# Fetch real notices from the database for this society once
+    society_notices = Notice.objects.filter(society=profile.society).order_by('-created_at')
 
-    elif role == 'chairperson':
+    if role == 'chairperson':
         # Add mock data for chairperson dashboard
         context.update({
             'stats': {
@@ -86,7 +93,9 @@ def portal_dashboard(request):
                 {'name': 'Q2 Financial Summary', 'type': 'PDF', 'size': '2.4 MB'},
                 {'name': 'Biannual Audit Report 2026', 'type': 'PDF', 'size': '4.1 MB'},
                 {'name': 'Security Audit & Visitor Trends', 'type': 'XLSX', 'size': '1.2 MB'}
-            ]
+            ],
+            'notices': society_notices,
+            'active_notices_count': society_notices.count(),
         })
         return render(request, 'chairperson/dashboard.html', context)
 
@@ -97,10 +106,11 @@ def portal_dashboard(request):
                 {'name': 'Aditya Verma', 'contact': '+91 99988 87776', 'apartment': 'A-402', 'purpose': 'Delivery (Amazon)', 'entry_time': 'Today, 2:15 PM', 'status': 'Checked In', 'badge_color': 'bg-emerald-500'},
                 {'name': 'Kabir Mehta', 'contact': '+91 98877 66554', 'apartment': 'C-101', 'purpose': 'Guest', 'entry_time': 'Today, 1:30 PM', 'status': 'Checked In', 'badge_color': 'bg-emerald-500'},
                 {'name': 'Pooja Hegde', 'contact': '+91 97766 55443', 'apartment': 'B-304', 'purpose': 'Maintenance', 'entry_time': 'Today, 11:00 AM', 'status': 'Checked Out', 'badge_color': 'bg-gray-400'},
-            ]
+            ],
+            'notices': society_notices,
+            'active_notices_count': society_notices.count(),
         })
         return render(request, 'security/visitors.html', context)
-
     elif role == 'maintenance':
         # Add mock data for staff / maintenance dashboard
         context.update({

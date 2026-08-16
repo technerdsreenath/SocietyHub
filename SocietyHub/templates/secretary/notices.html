@@ -1,0 +1,112 @@
+{% extends 'base.html' %}
+
+{% block page_title %}Notices{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header Banner -->
+    <div class="bg-[#1b3a32] text-white rounded-2xl p-6 shadow-sm flex justify-between items-center">
+        <div>
+            <h1 class="text-2xl font-bold">Society Notices & Circulars</h1>
+            <p class="text-sm text-gray-200 mt-1">Broadcast official announcements to residents of <strong>{{ profile.society.name }}</strong>.</p>
+        </div>
+        <button onclick="openNoticeModal()" class="bg-emerald-700 hover:bg-emerald-600 text-white text-xs px-4 py-2.5 rounded-xl font-semibold transition-all shadow-sm flex items-center gap-2">
+            <i data-lucide="plus" class="w-4 h-4"></i> Create New Notice
+        </button>
+    </div>
+
+    <!-- Notices Listing Card -->
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+        <h3 class="text-lg font-bold text-gray-900 mb-6">Active Circulars</h3>
+
+        <div class="space-y-4">
+            {% for notice in notices %}
+            <div class="p-5 rounded-2xl border border-gray-100 bg-gray-50/50 flex justify-between items-start">
+                <div class="space-y-2">
+                    <div class="flex items-center gap-3">
+                        <h4 class="font-bold text-gray-900 text-base">{{ notice.title }}</h4>
+                        <span class="text-[10px] bg-emerald-100 text-emerald-800 px-2.5 py-0.5 rounded-full font-semibold">{{ notice.status|default:"Published" }}</span>
+                    </div>
+                    <p class="text-sm text-gray-600">{{ notice.content }}</p>
+                    <p class="text-xs text-gray-400">Published on: {{ notice.created_at|date:"M d, Y" }}</p>
+                </div>
+            </div>
+            {% empty %}
+            <div class="text-center py-12 text-gray-400">
+                <div class="w-12 h-12 bg-gray-50 text-gray-400 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <i data-lucide="megaphone" class="w-6 h-6"></i>
+                </div>
+                <p class="font-medium text-gray-700">No active notices found.</p>
+                <p class="text-xs text-gray-400 mt-1">Create a notice to broadcast updates to your society.</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- Create Notice Modal -->
+<div id="noticeModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl relative animate-in fade-in zoom-in duration-200">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-bold text-gray-900">Create New Notice</h3>
+            <button onclick="closeNoticeModal()" class="text-gray-400 hover:text-gray-600">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+        </div>
+
+        <form method="POST" class="space-y-4">
+            {% csrf_token %}
+            <div>
+                <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Notice Title</label>
+                <input type="text" name="title" required placeholder="e.g., Water Supply Disruption" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-[#1b3a32]">
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Content / Description</label>
+                <textarea name="content" rows="4" required placeholder="Provide complete details for residents..." class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-[#1b3a32]"></textarea>
+            </div>
+
+            <!-- Date and Time Grid Fields -->
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Date</label>
+                    <input type="date" name="notice_date" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-[#1b3a32] bg-white">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Time</label>
+                    <input type="time" name="notice_time" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-[#1b3a32] bg-white">
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Status</label>
+                <select name="status" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-[#1b3a32] bg-white">
+                    <option value="Published">Published</option>
+                    <option value="Draft">Draft</option>
+                </select>
+            </div>
+
+            <div class="flex justify-end gap-3 pt-4">
+                <button type="button" onclick="closeNoticeModal()" class="px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-100 rounded-xl transition-all">Cancel</button>
+                <button type="submit" class="px-5 py-2 bg-[#1b3a32] text-white text-sm font-semibold rounded-xl hover:bg-opacity-90 transition-all shadow-sm">Publish Notice</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    lucide.createIcons();
+
+    function openNoticeModal() {
+        document.getElementById('noticeModal').classList.remove('hidden');
+        document.getElementById('noticeModal').classList.add('flex');
+    }
+
+    function closeNoticeModal() {
+        document.getElementById('noticeModal').classList.remove('flex');
+        document.getElementById('noticeModal').classList.add('hidden');
+    }
+</script>
+{% endblock %}

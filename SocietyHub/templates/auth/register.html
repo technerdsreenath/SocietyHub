@@ -79,6 +79,42 @@
                 el.className = 'w-full bg-portal-bg border border-portal-border rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-portal-primary';
             }
         });
+        
+    document.addEventListener('DOMContentLoaded', function () {
+        const roleSelect = document.querySelector('select[name="role"]');
+        const restrictedFields = ['wing', 'flat_number', 'flat_name', 'area_sqft'];
+
+        function updateFieldStates() {
+            if (!roleSelect) return;
+            
+            const selectedText = roleSelect.options[roleSelect.selectedIndex].text.toLowerCase();
+            const selectedVal = roleSelect.value.toLowerCase();
+
+            const isNonResident = 
+                selectedText.includes('security') || 
+                selectedText.includes('staff') || 
+                selectedVal.includes('security') || 
+                selectedVal.includes('staff');
+
+            restrictedFields.forEach(fieldName => {
+                const field = document.querySelector(`[name="${fieldName}"]`);
+                if (field) {
+                    if (isNonResident) {
+                        field.disabled = true;
+                        field.value = ''; // Clear value when locked
+                    } else {
+                        field.disabled = false;
+                    }
+                }
+            });
+        }
+
+        if (roleSelect) {
+            roleSelect.addEventListener('change', updateFieldStates);
+            updateFieldStates(); // Run immediately on page load
+        }
+    });
+
     </script>
 </body>
 </html>

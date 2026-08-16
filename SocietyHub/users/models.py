@@ -12,6 +12,18 @@ class Society(models.Model):
     def __str__(self):
         return f"{self.name} ({self.area})"
 
+class Notice(models.Model):
+    society = models.ForeignKey('Society', on_delete=models.CASCADE)
+    title = models.CharField(max_length=255)
+    content = models.TextField()
+    status = models.CharField(max_length=50, default='Published')
+    created_at = models.DateTimeField(auto_now_add=True)
+    notice_date = models.DateField(null=True, blank=True)  # <--- Added
+    notice_time = models.TimeField(null=True, blank=True)  # <--- Added
+
+    def __str__(self):
+        return self.title
+
 class UserProfile(models.Model):
     ROLE_CHOICES = [
         ('resident', 'Resident'),

@@ -10,7 +10,7 @@
     <div class="bg-gradient-to-r from-[#4F6D7A] to-[#3a525d] rounded-2xl p-6 text-white shadow-card flex flex-col md:flex-row justify-between items-start md:items-center gap-4 transition-all hover:shadow-lg">
         <div>
             <h2 class="text-xl font-bold">Welcome back, {% if user.get_full_name %}{{ user.get_full_name }}{% else %}{{ user.username }}{% endif %}!</h2>
-            <p class="text-xs text-white/80 mt-1">You are logged in to the resident portal of <strong class="text-white">{{ profile.society.name }}</strong> (Apartment: {{ profile.apartment_name }}).</p>
+            <p class="text-xs text-white/80 mt-1">You are logged in to the resident portal of <strong class="text-white">{{ profile.society.name }}</strong> (Wing: {{ profile.wing }}, Flat: {{ profile.flat_number }}).</p>
         </div>
         <div class="px-4 py-2 bg-white/10 rounded-xl backdrop-blur-md text-xs font-semibold flex items-center gap-2">
             <span class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>

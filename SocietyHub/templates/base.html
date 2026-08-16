@@ -43,10 +43,10 @@
                 </div>
                 <div>
                     <h2 class="font-bold text-portal-text text-sm leading-tight">
-                        {% if profile.society %}{{ profile.society.name }}{% else %}Society Hub{% endif %}
+                        {% if request.user.profile.society %}{{ request.user.profile.society.name }}{% else %}Society Hub{% endif %}
                     </h2>
                     <p class="text-[10px] text-portal-muted font-bold uppercase tracking-wider mt-0.5">
-                        {{ profile.get_role_display }}
+                        {{ request.user.profile.get_role_display }}
                     </p>
                 </div>
             </div>
@@ -75,13 +75,12 @@
                         <i data-lucide="users" class="w-4 h-4"></i>
                         Directory
                     </a>
-
                 {% elif profile.role == 'secretary' %}
-                    <a href="#" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold text-portal-muted hover:bg-portal-bg hover:text-portal-text transition-all">
+                    <a href="{% url 'secretary_approvals' %}" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all {% if request.resolver_match.url_name == 'secretary_approvals' %}bg-portal-primary/10 text-portal-primary{% else %}text-portal-muted hover:bg-portal-bg hover:text-portal-text{% endif %}">
                         <i data-lucide="user-check" class="w-4 h-4"></i>
                         Approvals
                     </a>
-                    <a href="#" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold text-portal-muted hover:bg-portal-bg hover:text-portal-text transition-all">
+                    <a href="{% url 'secretary_notices' %}" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all {% if request.resolver_match.url_name == 'secretary_notices' %}bg-portal-primary/10 text-portal-primary{% else %}text-portal-muted hover:bg-portal-bg hover:text-portal-text{% endif %}">
                         <i data-lucide="megaphone" class="w-4 h-4"></i>
                         Notices
                     </a>
@@ -89,7 +88,6 @@
                         <i data-lucide="list-todo" class="w-4 h-4"></i>
                         Complaints
                     </a>
-
                 {% elif profile.role == 'chairperson' %}
                     <a href="#" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold text-portal-muted hover:bg-portal-bg hover:text-portal-text transition-all">
                         <i data-lucide="wallet" class="w-4 h-4"></i>

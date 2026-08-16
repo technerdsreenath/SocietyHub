@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+
+{% block title %}Chairperson Dashboard - Society Hub{% endblock %}
+
+{% block page_title %}Chairperson Dashboard{% endblock %}
+
+{% block content %}
+<div class="space-y-8 pb-24">
+    <!-- Header Block -->
+    <div class="bg-gradient-to-r from-[#1E293B] to-[#0F172A] rounded-2xl p-6 text-white shadow-card flex flex-col md:flex-row justify-between items-start md:items-center gap-4 hover:shadow-lg transition-all">
+        <div>
+            <h2 class="text-xl font-bold">Executive Board: Chairperson</h2>
+            <p class="text-xs text-white/80 mt-1">Review financial performance, society reports, and oversight metrics for <strong class="text-white">{{ profile.society.name|default:"Laburnum CHS" }}</strong>.</p>
+        </div>
+        <div class="px-3.5 py-1.5 bg-white/10 rounded-xl text-xs font-semibold flex items-center gap-2">
+            <i data-lucide="shield-check" class="w-4 h-4 text-emerald-400"></i>
+            Board Overseer Access
+        </div>
+    </div>
+
+    <!-- Stats Row -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+            <span class="text-[10px] font-bold uppercase text-gray-400 tracking-wider">Total Residents</span>
+            <h3 class="text-2xl font-black text-gray-900 mt-2">148</h3>
+        </div>
+        <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+            <span class="text-[10px] font-bold uppercase text-gray-400 tracking-wider">Collection Rate</span>
+            <h3 class="text-2xl font-black text-emerald-600 mt-2">92%</h3>
+        </div>
+        <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+            <span class="text-[10px] font-bold uppercase text-gray-400 tracking-wider">Monthly Revenue</span>
+            <h3 class="text-2xl font-black text-gray-900 mt-2">₹4,85,000</h3>
+        </div>
+        <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+            <span class="text-[10px] font-bold uppercase text-gray-400 tracking-wider">Reserve Fund</span>
+            <h3 class="text-2xl font-black text-gray-900 mt-2">₹24,50,000</h3>
+        </div>
+    </div>
+
+    <!-- Main Content Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <!-- Recent Collection Transactions (Left) -->
+        <div class="lg:col-span-8 space-y-8">
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-[#FCFDFD]">
+                    <h3 class="font-bold text-sm text-gray-900 flex items-center gap-2">
+                        <i data-lucide="arrow-up-right" class="w-4 h-4 text-emerald-600"></i>
+                        Recent Collection Transactions
+                    </h3>
+                    <a href="#" class="text-[11px] font-bold text-emerald-600 hover:underline">View General Ledger</a>
+                </div>
+                <div class="divide-y divide-gray-100">
+                    <div class="p-5 flex justify-between items-center hover:bg-gray-50/50 transition-colors">
+                        <div class="space-y-1">
+                            <h4 class="font-bold text-xs text-gray-900">Aman Gupta</h4>
+                            <span class="text-[10px] text-gray-500 font-medium">Maintenance Fee</span>
+                        </div>
+                        <div class="text-right">
+                            <span class="font-black text-xs text-gray-900">₹3,500</span>
+                            <span class="block text-[9px] text-gray-400 mt-0.5">Today, 2:30 PM</span>
+                        </div>
+                        <span class="px-2.5 py-1 bg-emerald-50 text-emerald-700 text-[10px] font-bold rounded-full">SUCCESS</span>
+                    </div>
+                    <div class="p-5 flex justify-between items-center hover:bg-gray-50/50 transition-colors">
+                        <div class="space-y-1">
+                            <h4 class="font-bold text-xs text-gray-900">Meera Joshi</h4>
+                            <span class="text-[10px] text-gray-500 font-medium">Clubhouse Booking</span>
+                        </div>
+                        <div class="text-right">
+                            <span class="font-black text-xs text-gray-900">₹1,500</span>
+                            <span class="block text-[9px] text-gray-400 mt-0.5">Yesterday, 11:15 AM</span>
+                        </div>
+                        <span class="px-2.5 py-1 bg-emerald-50 text-emerald-700 text-[10px] font-bold rounded-full">SUCCESS</span>
+                    </div>
+                    <div class="p-5 flex justify-between items-center hover:bg-gray-50/50 transition-colors">
+                        <div class="space-y-1">
+                            <h4 class="font-bold text-xs text-gray-900">Rajesh Patil</h4>
+                            <span class="text-[10px] text-gray-500 font-medium">Penalty (Late Payment)</span>
+                        </div>
+                        <div class="text-right">
+                            <span class="font-black text-xs text-gray-900">₹500</span>
+                            <span class="block text-[9px] text-gray-400 mt-0.5">Aug 05</span>
+                        </div>
+                        <span class="px-2.5 py-1 bg-emerald-50 text-emerald-700 text-[10px] font-bold rounded-full">SUCCESS</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Financial & Audit Reports (Right) -->
+        <div class="lg:col-span-4 space-y-6">
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                <h3 class="font-bold text-sm text-gray-900 flex items-center gap-2 mb-4">
+                    <i data-lucide="file-text" class="w-4 h-4 text-emerald-600"></i>
+                    Financial & Audit Reports
+                </h3>
+                <div class="space-y-3">
+                    <div class="p-3.5 bg-gray-50 rounded-xl border border-gray-100 flex items-center justify-between">
+                        <div>
+                            <h4 class="text-xs font-bold text-gray-800">Q2 Financial Summary</h4>
+                            <span class="text-[10px] text-gray-400">PDF • 2.4 MB</span>
+                        </div>
+                        <button class="p-2 text-gray-600 hover:text-emerald-600 hover:bg-white rounded-lg transition-all">
+                            <i data-lucide="download" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                    <div class="p-3.5 bg-gray-50 rounded-xl border border-gray-100 flex items-center justify-between">
+                        <div>
+                            <h4 class="text-xs font-bold text-gray-800">Biannual Audit Report 2026</h4>
+                            <span class="text-[10px] text-gray-400">PDF • 4.1 MB</span>
+                        </div>
+                        <button class="p-2 text-gray-600 hover:text-emerald-600 hover:bg-white rounded-lg transition-all">
+                            <i data-lucide="download" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                    <div class="p-3.5 bg-gray-50 rounded-xl border border-gray-100 flex items-center justify-between">
+                        <div>
+                            <h4 class="text-xs font-bold text-gray-800">Security Audit & Visitor Trends</h4>
+                            <span class="text-[10px] text-gray-400">XLSX • 1.2 MB</span>
+                        </div>
+                        <button class="p-2 text-gray-600 hover:text-emerald-600 hover:bg-white rounded-lg transition-all">
+                            <i data-lucide="download" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Society Notices & Announcements (Matching Security Guard Dashboard Box) -->
+    <div class="w-full bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-base font-bold text-gray-900 flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-[#4F6D7A]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                </svg>
+                Society Notices & Announcements
+            </h3>
+            <span class="text-xs bg-emerald-50 text-emerald-700 font-semibold px-2.5 py-1 rounded-full">
+                Active Feed
+            </span>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {% if notices %}
+                {% for notice in notices %}
+                <div class="p-4 bg-gray-50 rounded-xl border border-gray-100 flex flex-col justify-between">
+                    <div>
+                        <h4 class="text-sm font-bold text-gray-800">{{ notice.title }}</h4>
+                        <p class="text-xs text-gray-600 mt-1.5 leading-relaxed">{{ notice.content }}</p>
+                    </div>
+                    <div class="mt-4 flex items-center justify-between">
+                        <span class="text-[10px] text-gray-400 font-medium">
+                            {% if notice.notice_date %}{{ notice.notice_date|date:"M d, Y" }}{% else %}{{ notice.created_at|date:"M d, Y" }}{% endif %}
+                        </span>
+                        <span class="text-[10px] px-2 py-0.5 bg-gray-200 text-gray-700 font-bold rounded">{{ notice.status }}</span>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <p class="text-xs text-gray-500 py-4 col-span-full text-center">No active notices or announcements available right now.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

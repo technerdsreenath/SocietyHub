@@ -18,7 +18,7 @@ from .forms import (
     UserRegistrationForm,
     UserProfileEditForm,
 )
-from .models import Society, UserProfile
+from .models import Society, UserProfile, Notice
 from django.db import transaction
 
 
@@ -184,22 +184,116 @@ def reject_secretary(request, pk):
     user.delete()
     return redirect('chairperson_approvals')
 
+@login_required
+def portal_dashboard(request):
+    profile = getattr(request.user, 'profile', None)
+    if not profile:
+        return redirect('login')
+    
+    context = {'profile': profile}
+    
+    if profile.role == 'secretary':
+        pending_profiles = UserProfile.objects.filter(
+            role__in=['resident', 'security', 'maintenance'], 
+            society=profile.society, 
+            is_approved=False
+        ).select_related('user')
+        
+        # --- ADD THESE PRINT STATEMENTS ---
+        print("--- DEBUG DASHBOARD ---")
+        print("Secretary:", request.user.username)
+        print("Society:", profile.society)
+        print("Pending Count Found:", pending_profiles.count())
+        for p in pending_profiles:
+            print(" - Pending User:", p.user.username, "| Society:", p.society, "| Approved:", p.is_approved)
+        print("-----------------------")
+        
+        context['pending_profiles'] = pending_profiles
+        context['pending_count'] = pending_profiles.count()
+        
+    return render(request, 'secretary/dashboard.html', context)
+
+@login_required
+def secretary_notices_view(request):
+    profile = getattr(request.user, 'profile', None)
+    if not profile or profile.role != 'secretary':
+        return HttpResponseForbidden()
+    
+    # Fetch real notices from the database for the secretary's society
+    notices = Notice.objects.filter(society=profile.society).order_by('-created_at')
+    
+    context = {
+        'profile': profile,
+        'notices': notices,
+    }
+    return render(request, 'secretary/notices.html', context)
+
+@login_required
+def secretary_notices_view(request):
+    profile = getattr(request.user, 'profile', None)
+    if not profile or profile.role != 'secretary':
+        return HttpResponseForbidden()
+    
+    if request.method == 'POST':
+        title = request.POST.get('title')
+        content = request.POST.get('content')
+        status = request.POST.get('status', 'Published')
+        notice_date = request.POST.get('notice_date') or None
+        notice_time = request.POST.get('notice_time') or None
+        
+        if title and content:
+            Notice.objects.create(
+                society=profile.society,
+                title=title,
+                content=content,
+                status=status,
+                notice_date=notice_date,
+                notice_time=notice_time
+            )
+            return redirect('secretary_notices')
+
+    notices = Notice.objects.filter(society=profile.society).order_by('-created_at')
+    
+    context = {
+        'profile': profile,
+        'notices': notices,
+    }
+    return render(request, 'secretary/notices.html', context)
+
+@login_required
+def chairperson_dashboard(request):
+    try:
+        profile = request.user.profile
+        society = profile.society
+        # Fetch notices for this specific society
+        notices = Notice.objects.filter(society=society).order_by('-created_at')
+    except (UserProfile.DoesNotExist, AttributeError):
+        notices = []
+        profile = None
+
+    context = {
+        'profile': profile,
+        'notices': notices,
+    }
+    return render(request, 'chairperson_dashboard.html', context)
 
 @login_required
 def secretary_approvals_view(request):
     profile = getattr(request.user, 'profile', None)
     if not profile or profile.role != 'secretary':
-        return HttpResponseForbidden("Access denied.")
+        return HttpResponseForbidden()
     
-    pending_residents = UserProfile.objects.filter(
-        role='resident', 
+    pending_profiles = UserProfile.objects.filter(
+        role__in=['resident', 'security', 'maintenance'],
         society=profile.society, 
         is_approved=False
     ).select_related('user')
     
-    return render(request, 'secretary/approvals.html', {
-        'pending_residents': pending_residents
-    })
+    context = {
+        'profile': profile,  # <-- Added this so 'profile' exists in context
+        'pending_profiles': pending_profiles
+    }
+    return render(request, 'secretary/approvals.html', context)
 
 @login_required
 def approve_resident(request, pk):
@@ -207,21 +301,22 @@ def approve_resident(request, pk):
     if not profile or profile.role != 'secretary':
         return HttpResponseForbidden()
     
+    # CHANGE: Allow resident, security, and maintenance roles
     resident_profile = get_object_or_404(
         UserProfile, 
         pk=pk, 
-        role='resident', 
+        role__in=['resident', 'security', 'maintenance'], 
         society=profile.society
     )
     resident_profile.is_approved = True
     resident_profile.save()
     
-    # Notify resident
+    # Notify user
     email = resident_profile.user.email
     if email:
         safe_send_mail(
             subject="Account Approved - SocietyHub",
-            message="Dear Resident, your registration request has been approved by the Secretary. Welcome to the portal!",
+            message=f"Dear {resident_profile.get_role_display()}, your registration request has been approved by the Secretary. Welcome to the portal!",
             recipient_list=[email]
         )
         
@@ -233,31 +328,23 @@ def reject_resident(request, pk):
     if not profile or profile.role != 'secretary':
         return HttpResponseForbidden()
     
+    # CHANGE: Allow resident, security, and maintenance roles
     resident_profile = get_object_or_404(
         UserProfile, 
         pk=pk, 
-        role='resident', 
+        role__in=['resident', 'security', 'maintenance'], 
         society=profile.society
     )
     user = resident_profile.user
     user.delete()
     return redirect('secretary_approvals')
-def login_view(request):
-    if request.method == 'POST':
-        form = AuthenticationForm(request, data=request.POST)
-        if form.is_valid():
-            user = form.get_user()
-            login(request, user)
-            return redirect('portal_dashboard')
-    else:
-        form = AuthenticationForm()
-    return render(request, 'auth/login.html', {'form': form})
+
 
 def register_view(request):
     if request.method == 'POST':
         form = UserRegistrationForm(request.POST)
         if form.is_valid():
-            # 1. Save user securely with hashed password if not already handled in form.save()
+            # 1. Save user securely with hashed password
             user = form.save(commit=False)
             password = form.cleaned_data.get('password')
             user.set_password(password)  # Crucial for proper authentication!
@@ -269,7 +356,7 @@ def register_view(request):
                 society=form.cleaned_data.get('society'),
                 role=form.cleaned_data.get('role'),
                 contact=form.cleaned_data.get('contact'),
-                flat_name=form.cleaned_data.get('flat_name', ''),  # Fixed from apartment_name
+                flat_name=form.cleaned_data.get('flat_name', ''),  
                 area_sqft=form.cleaned_data.get('area_sqft', None),
                 is_approved=False
             )
@@ -277,7 +364,13 @@ def register_view(request):
     else:
         form = UserRegistrationForm()
 
-    return render(request, 'auth/register.html', {'form': form})
+    # Fetch societies so your template's {% for s in societies %} loop works
+    societies = Society.objects.all()
+
+    return render(request, 'auth/register.html', {
+        'form': form,
+        'societies': societies
+    })
 
 from django.db import transaction
 

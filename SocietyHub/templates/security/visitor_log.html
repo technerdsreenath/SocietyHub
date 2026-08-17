@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block title %}Visitor Log - Society Hub{% endblock %}
+
+{% block page_title %}Visitor Log{% endblock %}
+
+{% block content %}
+<div class="space-y-8 pb-24">
+    <!-- Header / Control Block -->
+    <div class="bg-portal-card border border-portal-border rounded-2xl p-6 shadow-sm flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+        <div>
+            <h2 class="text-sm font-bold text-portal-text flex items-center gap-2">
+                <i data-lucide="clipboard-list" class="w-4 h-4 text-portal-primary"></i>
+                All Visitor Records
+            </h2>
+            <p class="text-xs text-portal-muted font-medium mt-0.5">Filter and review visitors registered for {{ profile.society.name }}</p>
+        </div>
+        
+        <!-- Filter Form -->
+        <form method="GET" action="{% url 'visitor_log' %}" class="flex items-center gap-2.5" id="filter-form">
+            <label for="filter" class="text-[10px] font-bold uppercase text-portal-muted tracking-wider">Filter Range:</label>
+            <select name="filter" id="filter" onchange="document.getElementById('filter-form').submit();" class="bg-[#F8F9FA] border border-portal-border rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-portal-primary font-semibold text-portal-text">
+                <option value="today" {% if current_filter == 'today' %}selected{% endif %}>Today</option>
+                <option value="7_days" {% if current_filter == '7_days' %}selected{% endif %}>Last 7 Days</option>
+                <option value="30_days" {% if current_filter == '30_days' %}selected{% endif %}>Last 30 Days</option>
+                <option value="all" {% if current_filter == 'all' %}selected{% endif %}>All Records</option>
+            </select>
+        </form>
+    </div>
+
+    <!-- Table of Records -->
+    <div class="bg-portal-card border border-portal-border rounded-2xl shadow-card overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs border-collapse">
+                <thead>
+                    <tr class="bg-portal-bg/60 text-portal-muted font-bold border-b border-portal-border uppercase text-[10px] tracking-wider">
+                        <th class="p-4">Visitor Name</th>
+                        <th class="p-4">Purpose</th>
+                        <th class="p-4">Apartment / Flat</th>
+                        <th class="p-4">Phone / Contact</th>
+                        <th class="p-4">Check-In Time</th>
+                        <th class="p-4">Check-Out Time</th>
+                        <th class="p-4 text-center">Status</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-portal-border text-portal-text">
+                    {% for visitor in visitors %}
+                    <tr class="hover:bg-portal-bg/20 transition-colors">
+                        <td class="p-4 font-bold text-sm text-portal-text">{{ visitor.name }}</td>
+                        <td class="p-4">
+                            <span class="px-2 py-0.5 bg-portal-bg border border-portal-border text-portal-muted text-[10px] font-semibold rounded">
+                                {{ visitor.purpose }}
+                            </span>
+                        </td>
+                        <td class="p-4 font-bold text-portal-text">{{ visitor.apartment }}</td>
+                        <td class="p-4 text-portal-muted font-semibold">{{ visitor.contact }}</td>
+                        <td class="p-4 text-portal-muted font-medium">{{ visitor.entry_time }}</td>
+                        <td class="p-4 text-portal-muted font-medium">{% if visitor.exit_time %}{{ visitor.exit_time }}{% else %}-{% endif %}</td>
+                        <td class="p-4 text-center">
+                            <span class="px-2.5 py-1 rounded-lg text-[10px] font-bold {{ visitor.badge_color }} text-white shadow-sm">
+                                {{ visitor.status }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="p-8 text-center text-xs text-portal-muted font-medium">No visitor records found.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

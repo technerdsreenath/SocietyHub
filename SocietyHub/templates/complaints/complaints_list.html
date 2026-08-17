@@ -1,0 +1,258 @@
+{% extends "base.html" %}
+
+{% block title %}Complaints Portal - Society Hub{% endblock %}
+
+{% block page_title %}Complaints Portal{% endblock %}
+
+{% block content %}
+<div class="space-y-8 pb-24">
+    <!-- Messages Notification -->
+    {% if messages %}
+        <div class="space-y-2">
+            {% for message in messages %}
+                <div class="p-4 rounded-xl text-xs font-semibold border {% if message.tags == 'success' %}bg-green-50 border-green-200 text-green-800{% else %}bg-amber-50 border-amber-200 text-amber-800{% endif %}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <!-- Layout Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        
+        <!-- Registration Form (Visible to Resident, Chairperson, Secretary) -->
+        {% if role == 'resident' or role == 'chairperson' or role == 'secretary' %}
+        <div class="lg:col-span-4 space-y-8">
+            <div class="bg-portal-card border border-portal-border rounded-2xl shadow-card p-6">
+                <h3 class="font-bold text-sm text-portal-text flex items-center gap-2 mb-6 border-b border-portal-border pb-3">
+                    <i data-lucide="message-square-plus" class="text-portal-primary w-4.5 h-4.5"></i>
+                    Register New Complaint
+                </h3>
+                
+                <form method="POST" action="{% url 'create_complaint' %}" class="space-y-4">
+                    {% csrf_token %}
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase text-portal-muted mb-1.5">Complaint Title</label>
+                        <input type="text" name="title" placeholder="e.g. Corridor lighting broken" class="w-full bg-[#F8F9FA] border border-portal-border rounded-xl px-3.5 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-portal-primary font-medium text-portal-text" required>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase text-portal-muted mb-1.5">Category</label>
+                        <select name="category" class="w-full bg-[#F8F9FA] border border-portal-border rounded-xl px-3.5 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-portal-primary font-medium text-portal-text" required>
+                            <option value="General">General</option>
+                            <option value="Electrical">Electrical</option>
+                            <option value="Plumbing">Plumbing</option>
+                            <option value="Security">Security</option>
+                            <option value="Maintenance">Maintenance</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase text-portal-muted mb-1.5">Description</label>
+                        <textarea name="description" rows="4" placeholder="Describe the complaint in detail..." class="w-full bg-[#F8F9FA] border border-portal-border rounded-xl px-3.5 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-portal-primary font-medium text-portal-text" required></textarea>
+                    </div>
+                    <button type="submit" class="w-full bg-portal-primary hover:bg-portal-primary/95 text-white font-bold py-3 rounded-xl text-xs shadow-flat transition-all mt-4 flex items-center justify-center gap-2">
+                        <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i>
+                        Submit Complaint
+                    </button>
+                </form>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Lists Section (Spans dynamically based on whether Form is shown) -->
+        <div class="{% if role == 'resident' or role == 'chairperson' or role == 'secretary' %}lg:col-span-8{% else %}lg:col-span-12{% endif %} space-y-8">
+            
+            <!-- Resolver's Assigned Tasks (Visible to Maintenance, Security) -->
+            {% if role == 'maintenance' or role == 'security' %}
+            <div class="bg-portal-card border border-portal-border rounded-2xl shadow-card overflow-hidden">
+                <div class="p-6 border-b border-portal-border flex justify-between items-center bg-[#FCFDFD]">
+                    <h3 class="font-bold text-sm text-portal-text flex items-center gap-2">
+                        <i data-lucide="list-todo" class="w-4.5 h-4.5 text-portal-primary"></i>
+                        My Active Tasks
+                    </h3>
+                    <span class="px-2.5 py-0.5 bg-blue-50 text-blue-700 text-[10px] font-bold rounded-full">Assigned To Me</span>
+                </div>
+                <div class="divide-y divide-portal-border">
+                    {% for task in my_tasks %}
+                    <div class="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-portal-bg/10 transition-colors">
+                        <div class="space-y-1.5">
+                            <div class="flex items-center gap-2">
+                                <h4 class="font-bold text-xs text-portal-text">{{ task.title }}</h4>
+                                <span class="px-2 py-0.5 bg-portal-bg border border-portal-border text-portal-muted text-[10px] font-semibold rounded">
+                                    {{ task.category }}
+                                </span>
+                            </div>
+                            <p class="text-xs text-portal-muted font-medium leading-relaxed">
+                                {% if task.created_by.profile.wing or task.created_by.profile.flat_number %}
+                                    <strong class="text-portal-text">{{ task.created_by.profile.wing|default:"" }}-{{ task.created_by.profile.flat_number|default:"" }}</strong>, 
+                                {% endif %}
+                                {{ task.description }}
+                            </p>
+                            <div class="flex flex-col gap-1 text-[10px] text-portal-muted font-medium">
+                                <span>Filed By: <strong class="text-portal-text">{% if task.created_by.get_full_name %}{{ task.created_by.get_full_name }}{% else %}{{ task.created_by.username }}{% endif %}</strong> ({{ task.created_by.profile.get_role_display }})</span>
+                                <span>Date: {{ task.date }}</span>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <span class="px-2.5 py-1 rounded-lg text-[10px] font-bold border {{ task.status_class }}">
+                                {{ task.status }}
+                            </span>
+                            {% if task.status == 'In Progress' %}
+                            <div class="flex gap-2">
+                                <form method="POST" action="{% url 'complete_complaint' task.id %}">
+                                    {% csrf_token %}
+                                    <button type="submit" class="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-xl text-[10px] font-bold transition-all shadow-sm">
+                                        Mark Done
+                                    </button>
+                                </form>
+                                <form method="POST" action="{% url 'close_complaint' task.id %}">
+                                    {% csrf_token %}
+                                    <button type="submit" class="px-3 py-1.5 bg-gray-600 hover:bg-gray-700 text-white rounded-xl text-[10px] font-bold transition-all shadow-sm">
+                                        Close
+                                    </button>
+                                </form>
+                            </div>
+                            {% elif task.status == 'Completed' %}
+                            <form method="POST" action="{% url 'close_complaint' task.id %}">
+                                {% csrf_token %}
+                                <button type="submit" class="px-3 py-1.5 bg-gray-600 hover:bg-gray-700 text-white rounded-xl text-[10px] font-bold transition-all shadow-sm">
+                                    Close
+                                </button>
+                            </form>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% empty %}
+                    <p class="p-6 text-center text-xs text-portal-muted font-medium">You don't have any active tasks assigned.</p>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Society Complaints Archive (For Resolvers / Monitors) -->
+            {% if role == 'secretary' or role == 'maintenance' or role == 'security' %}
+            <div class="bg-portal-card border border-portal-border rounded-2xl shadow-card overflow-hidden">
+                <div class="p-6 border-b border-portal-border flex justify-between items-center bg-[#FCFDFD]">
+                    <h3 class="font-bold text-sm text-portal-text flex items-center gap-2">
+                        <i data-lucide="building" class="w-4.5 h-4.5 text-portal-primary"></i>
+                        Society Complaints Feed
+                    </h3>
+                    <span class="px-2.5 py-0.5 bg-portal-bg border border-portal-border text-portal-muted text-[10px] font-bold rounded-full">All Records</span>
+                </div>
+                <div class="divide-y divide-portal-border">
+                    {% for complaint in all_complaints %}
+                    <div class="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-portal-bg/10 transition-colors">
+                        <div class="space-y-1.5">
+                            <div class="flex items-center gap-2">
+                                <h4 class="font-bold text-xs text-portal-text">{{ complaint.title }}</h4>
+                                <span class="px-2 py-0.5 bg-portal-bg border border-portal-border text-portal-muted text-[10px] font-semibold rounded">
+                                    {{ complaint.category }}
+                                </span>
+                            </div>
+                            <p class="text-xs text-portal-muted font-medium leading-relaxed">
+                                {% if complaint.created_by.profile.wing or complaint.created_by.profile.flat_number %}
+                                    <strong class="text-portal-text">{{ complaint.created_by.profile.wing|default:"" }}-{{ complaint.created_by.profile.flat_number|default:"" }}</strong>, 
+                                {% endif %}
+                                {{ complaint.description }}
+                            </p>
+                            <div class="flex flex-col gap-1 text-[10px] text-portal-muted font-medium">
+                                <span>Filed By: <strong class="text-portal-text">{% if complaint.created_by.get_full_name %}{{ complaint.created_by.get_full_name }}{% else %}{{ complaint.created_by.username }}{% endif %}</strong> ({{ complaint.created_by.profile.get_role_display }})</span>
+                                <span>Date: {{ complaint.date }}</span>
+                                {% if complaint.assigned_to %}
+                                <span>Assigned Resolver: <strong class="text-portal-text">{% if complaint.assigned_to.get_full_name %}{{ complaint.assigned_to.get_full_name }}{% else %}{{ complaint.assigned_to.username }}{% endif %}</strong> ({{ complaint.assigned_to.profile.get_role_display }})</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <span class="px-2.5 py-1 rounded-lg text-[10px] font-bold border {{ complaint.status_class }}">
+                                {{ complaint.status }}
+                            </span>
+                            {% if complaint.status == 'Pending' and role != 'secretary' %}
+                            <form method="POST" action="{% url 'accept_complaint' complaint.id %}">
+                                {% csrf_token %}
+                                <button type="submit" class="px-3 py-1.5 bg-portal-primary hover:bg-portal-primary/95 text-white rounded-xl text-[10px] font-bold transition-all shadow-sm">
+                                    Accept Task
+                                </button>
+                            </form>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% empty %}
+                    <p class="p-6 text-center text-xs text-portal-muted font-medium">No complaints active in the society.</p>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- My Filed Complaints (For Creator roles: Resident, Chairperson, Secretary) -->
+            {% if role == 'resident' or role == 'chairperson' or role == 'secretary' %}
+            <div class="bg-portal-card border border-portal-border rounded-2xl shadow-card overflow-hidden">
+                <div class="p-6 border-b border-portal-border flex justify-between items-center bg-[#FCFDFD]">
+                    <h3 class="font-bold text-sm text-portal-text flex items-center gap-2">
+                        <i data-lucide="folder-heart" class="w-4.5 h-4.5 text-portal-primary"></i>
+                        My Filed Complaints
+                    </h3>
+                </div>
+                <div class="divide-y divide-portal-border">
+                    {% for complaint in my_complaints %}
+                    <div class="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-portal-bg/10 transition-colors">
+                        <div class="space-y-1.5">
+                            <div class="flex items-center gap-2">
+                                <h4 class="font-bold text-xs text-portal-text">{{ complaint.title }}</h4>
+                                <span class="px-2 py-0.5 bg-portal-bg border border-portal-border text-portal-muted text-[10px] font-semibold rounded">
+                                    {{ complaint.category }}
+                                </span>
+                            </div>
+                            <p class="text-xs text-portal-muted font-medium leading-relaxed">
+                                {% if complaint.created_by.profile.wing or complaint.created_by.profile.flat_number %}
+                                    <strong class="text-portal-text">{{ complaint.created_by.profile.wing|default:"" }}-{{ complaint.created_by.profile.flat_number|default:"" }}</strong>, 
+                                {% endif %}
+                                {{ complaint.description }}
+                            </p>
+                            <div class="flex flex-col gap-1 text-[10px] text-portal-muted font-medium">
+                                <span>Date Filed: {{ complaint.date }}</span>
+                                {% if complaint.assigned_to %}
+                                <span class="text-portal-primary font-bold">
+                                    Resolved By: {% if complaint.assigned_to.get_full_name %}{{ complaint.assigned_to.get_full_name }}{% else %}{{ complaint.assigned_to.username }}{% endif %} ({{ complaint.assigned_to.profile.get_role_display }})
+                                </span>
+                                {% else %}
+                                <span class="text-amber-600 font-semibold">Awaiting resolver assignment</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            {% if complaint.status == 'Closed' %}
+                            <div class="flex flex-col items-end gap-1.5">
+                                <span class="text-[10px] text-portal-muted font-bold">Was this resolved successfully?</span>
+                                <div class="flex gap-2">
+                                    <form method="POST" action="{% url 'approve_complaint_resolution' complaint.id 'yes' %}">
+                                        {% csrf_token %}
+                                        <button type="submit" class="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-xl text-[10px] font-bold transition-all shadow-sm">
+                                            Yes
+                                        </button>
+                                    </form>
+                                    <form method="POST" action="{% url 'approve_complaint_resolution' complaint.id 'no' %}">
+                                        {% csrf_token %}
+                                        <button type="submit" class="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-[10px] font-bold transition-all shadow-sm">
+                                            No
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                            {% else %}
+                            <span class="px-2.5 py-1 rounded-lg text-[10px] font-bold border {{ complaint.status_class }}">
+                                {{ complaint.status }}
+                            </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% empty %}
+                    <p class="p-6 text-center text-xs text-portal-muted font-medium">You haven't filed any complaints yet.</p>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,10 +1,13 @@
 from django.contrib import admin
 from django.urls import path, include
 from SocietyHub.users import views
+from django.contrib.auth import views as auth_views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('users/', include('SocietyHub.users.urls')),
+    path('visitors/', include('SocietyHub.visitors.urls')),
+    path('complaints/', include('SocietyHub.complaints.urls')),
     path('', include('SocietyHub.core.urls')),
 
     # Add these right here so /superadmin/approvals/ opens directly:

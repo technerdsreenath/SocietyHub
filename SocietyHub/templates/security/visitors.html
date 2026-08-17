@@ -27,33 +27,34 @@
                     <i data-lucide="user-plus" class="text-portal-primary w-4.5 h-4.5"></i>
                     Register Incoming Visitor
                 </h3>
-                <form class="space-y-4" onsubmit="event.preventDefault(); alert('Visitor registered mock action successful!');">
+                <form method="POST" action="{% url 'check_in_visitor' %}" class="space-y-4">
+                    {% csrf_token %}
                     <div>
                         <label class="block text-[10px] font-bold uppercase text-portal-muted mb-1.5">Visitor Full Name</label>
-                        <input type="text" placeholder="e.g. John Doe" class="w-full bg-[#F8F9FA] border border-portal-border rounded-xl px-3.5 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-portal-primary">
+                        <input type="text" name="name" placeholder="e.g. John Doe" class="w-full bg-[#F8F9FA] border border-portal-border rounded-xl px-3.5 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-portal-primary" required>
                     </div>
                     <div>
                         <label class="block text-[10px] font-bold uppercase text-portal-muted mb-1.5">Contact Number</label>
-                        <input type="text" placeholder="e.g. +91 99999 88888" class="w-full bg-[#F8F9FA] border border-portal-border rounded-xl px-3.5 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-portal-primary">
+                        <input type="text" name="contact" placeholder="e.g. +91 99999 88888" class="w-full bg-[#F8F9FA] border border-portal-border rounded-xl px-3.5 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-portal-primary" required>
                     </div>
                     <div class="grid grid-cols-2 gap-4">
                         <div>
                             <label class="block text-[10px] font-bold uppercase text-portal-muted mb-1.5">Apartment / Flat</label>
-                            <input type="text" placeholder="e.g. A-402" class="w-full bg-[#F8F9FA] border border-portal-border rounded-xl px-3.5 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-portal-primary">
+                            <input type="text" name="apartment" placeholder="e.g. A-402" class="w-full bg-[#F8F9FA] border border-portal-border rounded-xl px-3.5 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-portal-primary" required>
                         </div>
                         <div>
                             <label class="block text-[10px] font-bold uppercase text-portal-muted mb-1.5">Purpose of Visit</label>
-                            <select class="w-full bg-[#F8F9FA] border border-portal-border rounded-xl px-3.5 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-portal-primary">
-                                <option>Delivery (Amazon/Zomato)</option>
-                                <option>Personal Guest</option>
-                                <option>Maintenance / Service</option>
-                                <option>Courier / Post</option>
+                            <select name="purpose" class="w-full bg-[#F8F9FA] border border-portal-border rounded-xl px-3.5 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-portal-primary" required>
+                                <option value="Delivery (Amazon/Zomato)">Delivery (Amazon/Zomato)</option>
+                                <option value="Personal Guest">Personal Guest</option>
+                                <option value="Maintenance / Service">Maintenance / Service</option>
+                                <option value="Courier / Post">Courier / Post</option>
                             </select>
                         </div>
                     </div>
                     <button type="submit" class="w-full bg-portal-primary hover:bg-portal-primary/95 text-white font-bold py-3 rounded-xl text-xs shadow-flat transition-all mt-4 flex items-center justify-center gap-2">
                         <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i>
-                        Record Entry (Check-In)
+                        Record Entry
                     </button>
                 </form>
             </div>
@@ -67,21 +68,22 @@
                         <i data-lucide="users" class="w-4 h-4 text-portal-primary"></i>
                         Visitor Log (Today)
                     </h3>
-                    <a href="#" class="text-[11px] font-bold text-portal-primary hover:underline">View All Records</a>
+                    <a href="{% url 'visitor_log' %}" class="text-[11px] font-bold text-portal-primary hover:underline">View All Records</a>
                 </div>
                 <div class="divide-y divide-portal-border">
                     {% for visitor in visitors %}
-                    <div class="p-5 flex justify-between items-center hover:bg-portal-bg/20 transition-colors">
+                    <div class="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-portal-bg/20 transition-colors">
                         <div class="space-y-1">
                             <div class="flex items-center gap-2.5">
                                 <h4 class="font-bold text-xs text-portal-text">{{ visitor.name }}</h4>
                                 <span class="px-2 py-0.5 bg-portal-bg border border-portal-border text-portal-muted text-[9px] font-semibold rounded">{{ visitor.purpose }}</span>
                             </div>
-                            <div class="flex items-center gap-3 text-[10px] text-portal-muted font-medium">
+                            <div class="flex flex-col gap-1.5 text-[10px] text-portal-muted font-medium">
                                 <span>Apt: <strong class="text-portal-text">{{ visitor.apartment }}</strong></span>
-                                <span>•</span>
                                 <span>Entered: {{ visitor.entry_time }}</span>
-                                <span>•</span>
+                                {% if visitor.exit_time %}
+                                <span>Exited: {{ visitor.exit_time }}</span>
+                                {% endif %}
                                 <span>Phone: {{ visitor.contact }}</span>
                             </div>
                         </div>
@@ -91,9 +93,12 @@
                                 <span class="text-[10px] font-bold text-portal-text">{{ visitor.status }}</span>
                             </div>
                             {% if visitor.status == "Checked In" %}
-                            <button class="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-650 rounded-xl text-[10px] font-bold transition-all" onclick="alert('Checkout recorded mock action successfully!')">
-                                Checkout
-                            </button>
+                            <form method="POST" action="{% url 'check_out_visitor' visitor.id %}" class="inline">
+                                {% csrf_token %}
+                                <button type="submit" class="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-650 rounded-xl text-[10px] font-bold transition-all">
+                                    Checkout
+                                </button>
+                            </form>
                             {% endif %}
                         </div>
                     </div>

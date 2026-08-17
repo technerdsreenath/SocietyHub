@@ -56,7 +56,7 @@ class CustomLoginView(LoginView):
         return super().get_success_url()
 
 
-@login_required
+
 def superadmin_approvals_view(request):
     if not request.user.is_superuser:
         return HttpResponseForbidden("Access denied.")
@@ -358,6 +358,8 @@ def register_view(request):
                 contact=form.cleaned_data.get('contact'),
                 flat_name=form.cleaned_data.get('flat_name', ''),  
                 area_sqft=form.cleaned_data.get('area_sqft', None),
+                wing=form.cleaned_data.get('wing'),
+                flat_number=form.cleaned_data.get('flat_number'),
                 is_approved=False
             )
             return redirect('login')

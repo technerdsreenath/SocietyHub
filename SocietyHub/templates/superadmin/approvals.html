@@ -64,7 +64,7 @@
                         {% for building in pending_buildings %}
                         <tr class="hover:bg-portal-bg/50 transition-colors">
                             <td class="py-4 px-4 font-semibold text-portal-text">{{ building.name }}</td>
-                            <td class="py-4 px-4 text-portal-muted text-xs">{{ building.address }}</td>
+                            <td class="py-4 px-4 text-portal-muted text-xs">{{ building.area }}, {{ building.city }}</td>
                             <td class="py-4 px-4 text-right space-x-2">
                                 <form method="POST" action="{% url 'approve_building' building.id %}" class="inline">
                                     {% csrf_token %}

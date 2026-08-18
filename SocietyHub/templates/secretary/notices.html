@@ -10,7 +10,7 @@
             <h1 class="text-2xl font-bold">Society Notices & Circulars</h1>
             <p class="text-sm text-gray-200 mt-1">Broadcast official announcements to residents of <strong>{{ profile.society.name }}</strong>.</p>
         </div>
-        <button onclick="openNoticeModal()" class="bg-emerald-700 hover:bg-emerald-600 text-white text-xs px-4 py-2.5 rounded-xl font-semibold transition-all shadow-sm flex items-center gap-2">
+        <button onclick="openCreateModal()" class="bg-emerald-700 hover:bg-emerald-600 text-white text-xs px-4 py-2.5 rounded-xl font-semibold transition-all shadow-sm flex items-center gap-2">
             <i data-lucide="plus" class="w-4 h-4"></i> Create New Notice
         </button>
     </div>
@@ -28,8 +28,25 @@
                         <span class="text-[10px] bg-emerald-100 text-emerald-800 px-2.5 py-0.5 rounded-full font-semibold">{{ notice.status|default:"Published" }}</span>
                     </div>
                     <p class="text-sm text-gray-600">{{ notice.content }}</p>
-                    <p class="text-xs text-gray-400">Published on: {{ notice.created_at|date:"M d, Y" }}</p>
+                    <p class="text-xs text-gray-400">
+                        {% if notice.notice_date %}
+                            Scheduled: {{ notice.notice_date|date:"M d, Y" }} {% if notice.notice_time %}at {{ notice.notice_time|time:"P" }}{% endif %}
+                        {% else %}
+                            Published on: {{ notice.created_at|date:"M d, Y" }} at {{ notice.created_at|date:"P" }}
+                        {% endif %}
+                    </p>
                 </div>
+                <button 
+                    data-pk="{{ notice.pk }}"
+                    data-title="{{ notice.title }}"
+                    data-content="{{ notice.content }}"
+                    data-date="{{ notice.notice_date|date:'Y-m-d'|default:'' }}"
+                    data-time="{{ notice.notice_time|time:'H:i'|default:'' }}"
+                    data-status="{{ notice.status }}"
+                    onclick="openEditModalFromButton(this)" 
+                    class="p-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl transition-all shadow-sm flex items-center gap-1.5 text-xs font-semibold shrink-0 cursor-pointer">
+                    <i data-lucide="edit" class="w-3.5 h-3.5"></i> Edit Notice
+                </button>
             </div>
             {% empty %}
             <div class="text-center py-12 text-gray-400">
@@ -44,43 +61,43 @@
     </div>
 </div>
 
-<!-- Create Notice Modal -->
+<!-- Create/Edit Notice Modal -->
 <div id="noticeModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50 p-4">
     <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl relative animate-in fade-in zoom-in duration-200">
         <div class="flex justify-between items-center mb-4">
-            <h3 class="text-lg font-bold text-gray-900">Create New Notice</h3>
+            <h3 id="modalTitle" class="text-lg font-bold text-gray-900">Create New Notice</h3>
             <button onclick="closeNoticeModal()" class="text-gray-400 hover:text-gray-600">
                 <i data-lucide="x" class="w-5 h-5"></i>
             </button>
         </div>
 
-        <form method="POST" class="space-y-4">
+        <form id="noticeForm" method="POST" class="space-y-4">
             {% csrf_token %}
             <div>
                 <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Notice Title</label>
-                <input type="text" name="title" required placeholder="e.g., Water Supply Disruption" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-[#1b3a32]">
+                <input type="text" id="inputTitle" name="title" required placeholder="e.g., Water Supply Disruption" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-[#1b3a32]">
             </div>
 
             <div>
                 <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Content / Description</label>
-                <textarea name="content" rows="4" required placeholder="Provide complete details for residents..." class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-[#1b3a32]"></textarea>
+                <textarea id="inputContent" name="content" rows="4" required placeholder="Provide complete details for residents..." class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-[#1b3a32]"></textarea>
             </div>
 
             <!-- Date and Time Grid Fields -->
             <div class="grid grid-cols-2 gap-4">
                 <div>
                     <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Date</label>
-                    <input type="date" name="notice_date" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-[#1b3a32] bg-white">
+                    <input type="date" id="inputNoticeDate" name="notice_date" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-[#1b3a32] bg-white">
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Time</label>
-                    <input type="time" name="notice_time" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-[#1b3a32] bg-white">
+                    <input type="time" id="inputNoticeTime" name="notice_time" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-[#1b3a32] bg-white">
                 </div>
             </div>
 
             <div>
                 <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Status</label>
-                <select name="status" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-[#1b3a32] bg-white">
+                <select id="selectStatus" name="status" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-[#1b3a32] bg-white">
                     <option value="Published">Published</option>
                     <option value="Draft">Draft</option>
                 </select>
@@ -88,7 +105,7 @@
 
             <div class="flex justify-end gap-3 pt-4">
                 <button type="button" onclick="closeNoticeModal()" class="px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-100 rounded-xl transition-all">Cancel</button>
-                <button type="submit" class="px-5 py-2 bg-[#1b3a32] text-white text-sm font-semibold rounded-xl hover:bg-opacity-90 transition-all shadow-sm">Publish Notice</button>
+                <button type="submit" id="submitBtn" class="px-5 py-2 bg-[#1b3a32] text-white text-sm font-semibold rounded-xl hover:bg-opacity-90 transition-all shadow-sm">Publish Notice</button>
             </div>
         </form>
     </div>
@@ -99,7 +116,42 @@
 <script>
     lucide.createIcons();
 
-    function openNoticeModal() {
+    function openCreateModal() {
+        document.getElementById('modalTitle').innerText = 'Create New Notice';
+        document.getElementById('noticeForm').action = "{% url 'secretary_notices' %}";
+        document.getElementById('inputTitle').value = '';
+        document.getElementById('inputContent').value = '';
+        document.getElementById('inputNoticeDate').value = '';
+        document.getElementById('inputNoticeTime').value = '';
+        document.getElementById('selectStatus').value = 'Published';
+        document.getElementById('submitBtn').innerText = 'Publish Notice';
+        
+        document.getElementById('noticeModal').classList.remove('hidden');
+        document.getElementById('noticeModal').classList.add('flex');
+    }
+
+    function openEditModalFromButton(btn) {
+        const pk = btn.getAttribute('data-pk');
+        const title = btn.getAttribute('data-title');
+        const content = btn.getAttribute('data-content');
+        const date = btn.getAttribute('data-date');
+        const time = btn.getAttribute('data-time');
+        const status = btn.getAttribute('data-status');
+
+        openEditModal(pk, title, content, date, time, status);
+    }
+
+    function openEditModal(pk, title, content, date, time, status) {
+        document.getElementById('modalTitle').innerText = 'Edit Notice';
+        // Dynamically build the edit notice URL
+        document.getElementById('noticeForm').action = "/users/secretary/notices/" + pk + "/edit/";
+        document.getElementById('inputTitle').value = title;
+        document.getElementById('inputContent').value = content;
+        document.getElementById('inputNoticeDate').value = date;
+        document.getElementById('inputNoticeTime').value = time;
+        document.getElementById('selectStatus').value = status;
+        document.getElementById('submitBtn').innerText = 'Save Changes';
+
         document.getElementById('noticeModal').classList.remove('hidden');
         document.getElementById('noticeModal').classList.add('flex');
     }

@@ -19,6 +19,7 @@ class SocietyAndChairpersonForm(forms.Form):
     # Society Details
     society_name = forms.CharField(max_length=255, widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Society Name'}))
     area = forms.CharField(max_length=255, widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Area / Location'}))
+    city = forms.CharField(max_length=100, widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'City'}))
     total_wings = forms.IntegerField(widget=forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Total Wings'}))
     
     # Chairperson Account Details
@@ -93,7 +94,10 @@ class UserRegistrationForm(forms.ModelForm):
         label="Select Approved Society",
         empty_label="Choose your society..."
     )
-    role = forms.ChoiceField(choices=UserProfile.ROLE_CHOICES, label="Select Role")
+    role = forms.ChoiceField(
+        choices=[(val, label) for val, label in UserProfile.ROLE_CHOICES if val != 'chairperson'],
+        label="Select Role"
+    )
     
     # Profile specific details
     wing = forms.CharField(max_length=50, required=False, label="Wing (e.g., Wing A)")

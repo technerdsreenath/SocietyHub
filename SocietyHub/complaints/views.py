@@ -20,7 +20,7 @@ def complaints_list_view(request):
     all_complaints = []
     my_tasks = []
     
-    if role in ['secretary', 'maintenance', 'security']:
+    if role in ['secretary', 'maintenance', 'security', 'chairperson']:
         all_complaints = Complaint.objects.filter(society=society).order_by('-created_at')
         
     if role in ['maintenance', 'security']:

@@ -101,7 +101,7 @@ def portal_dashboard(request):
     elif role == 'maintenance':
         # Fetch assigned complaints and map them to tasks for staff dashboard
         from SocietyHub.complaints.models import Complaint
-        assigned_tasks = Complaint.objects.filter(assigned_to=request.user, society=profile.society).exclude(status='Closed').order_by('-created_at')
+        assigned_tasks = Complaint.objects.filter(assigned_to=request.user, society=profile.society).exclude(status__in=['Closed', 'Approved']).order_by('-created_at')
         
         mapped_tasks = []
         for comp in assigned_tasks:

@@ -11,6 +11,7 @@ from django.core.mail import send_mail
 from django.http import HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse_lazy
+from django.contrib import messages
 
 from .forms import (
     SecretaryRegistrationForm,
@@ -208,8 +209,21 @@ def portal_dashboard(request):
             print(" - Pending User:", p.user.username, "| Society:", p.society, "| Approved:", p.is_approved)
         print("-----------------------")
         
-        context['pending_profiles'] = pending_profiles
-        context['pending_count'] = pending_profiles.count()
+        from SocietyHub.complaints.models import Complaint
+        active_complaints_count = Complaint.objects.filter(society=profile.society).exclude(status='Closed').count()
+        
+        from SocietyHub.users.models import Notice
+        society_notices = Notice.objects.filter(society=profile.society).order_by('-created_at')
+
+        context.update({
+            'pending_profiles': pending_profiles,
+            'pending_count': pending_profiles.count(),
+            'pending_approvals_count': pending_profiles.count(),
+            'approvals': pending_profiles,
+            'active_complaints_count': active_complaints_count,
+            'active_notices_count': society_notices.count(),
+            'notices': society_notices[:2],
+        })
         
     return render(request, 'secretary/dashboard.html', context)
 
@@ -259,6 +273,46 @@ def secretary_notices_view(request):
         'notices': notices,
     }
     return render(request, 'secretary/notices.html', context)
+
+@login_required
+def notices_list_view(request):
+    profile = getattr(request.user, 'profile', None)
+    if not profile:
+        return HttpResponseForbidden("Access denied.")
+    
+    notices = Notice.objects.filter(society=profile.society).order_by('-created_at')
+    
+    context = {
+        'profile': profile,
+        'notices': notices,
+    }
+    return render(request, 'notices/notices_list.html', context)
+
+@login_required
+def edit_notice_view(request, pk):
+    profile = getattr(request.user, 'profile', None)
+    if not profile or profile.role != 'secretary':
+        return HttpResponseForbidden("Access denied.")
+    
+    notice = get_object_or_404(Notice, pk=pk, society=profile.society)
+    
+    if request.method == 'POST':
+        title = request.POST.get('title')
+        content = request.POST.get('content')
+        status = request.POST.get('status', 'Published')
+        notice_date = request.POST.get('notice_date') or None
+        notice_time = request.POST.get('notice_time') or None
+        
+        if title and content:
+            notice.title = title
+            notice.content = content
+            notice.status = status
+            notice.notice_date = notice_date
+            notice.notice_time = notice_time
+            notice.save()
+            messages.success(request, "Notice updated successfully!")
+            
+    return redirect('secretary_notices')
 
 @login_required
 def chairperson_dashboard(request):
@@ -385,6 +439,7 @@ def register_society_view(request):
                 society = Society.objects.create(
                     name=form.cleaned_data['society_name'],
                     area=form.cleaned_data['area'],
+                    city=form.cleaned_data['city'],
                     total_wings=form.cleaned_data['total_wings'],
                     is_approved=False
                 )

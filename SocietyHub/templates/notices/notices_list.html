@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+
+{% block title %}Notice Board - Society Hub{% endblock %}
+
+{% block page_title %}Society Notice Board{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header Card -->
+    <div class="bg-gradient-to-r from-emerald-800 to-emerald-950 rounded-2xl p-6 text-white shadow-card flex flex-col md:flex-row justify-between items-start md:items-center gap-4 hover:shadow-lg transition-all">
+        <div>
+            <h2 class="text-xl font-bold">Official Announcements & Circulars</h2>
+            <p class="text-xs text-white/80 mt-1">Stay updated with official broadcasts for <strong class="text-white">{{ profile.society.name }}</strong>.</p>
+        </div>
+        <div class="px-3.5 py-1.5 bg-white/10 rounded-xl text-xs font-semibold flex items-center gap-2">
+            <i data-lucide="info" class="w-4 h-4"></i>
+            Notice History
+        </div>
+    </div>
+
+    <!-- Notices Feed List -->
+    <div class="bg-portal-card border border-portal-border rounded-2xl shadow-card overflow-hidden">
+        <div class="p-6 border-b border-portal-border flex justify-between items-center bg-[#FCFDFD]">
+            <h3 class="font-bold text-sm text-portal-text flex items-center gap-2">
+                <i data-lucide="megaphone" class="w-4.5 h-4.5 text-portal-primary"></i>
+                All Society Circulars
+            </h3>
+            <span class="px-2.5 py-0.5 bg-portal-bg border border-portal-border text-portal-muted text-[10px] font-bold rounded-full">
+                {{ notices.count }} Records
+            </span>
+        </div>
+        <div class="divide-y divide-portal-border">
+            {% for notice in notices %}
+            <div class="p-6 hover:bg-portal-bg/10 transition-colors space-y-3">
+                <div class="flex justify-between items-start gap-4">
+                    <h4 class="font-bold text-sm text-portal-text leading-snug">{{ notice.title }}</h4>
+                    <span class="shrink-0 px-2.5 py-0.5 rounded-lg text-[9px] font-extrabold tracking-wider uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        {{ notice.status|default:"Published" }}
+                    </span>
+                </div>
+                <p class="text-xs text-portal-muted leading-relaxed font-medium">
+                    {{ notice.content }}
+                </p>
+                <div class="flex items-center gap-1.5 text-[10px] text-portal-muted font-semibold pt-1">
+                    <i data-lucide="clock" class="w-3.5 h-3.5 text-portal-primary"></i>
+                    <span>
+                        {% if notice.notice_date %}
+                            Scheduled: {{ notice.notice_date|date:"M d, Y" }}{% if notice.notice_time %} at {{ notice.notice_time|time:"P" }}{% endif %}
+                        {% else %}
+                            Published: {{ notice.created_at|date:"M d, Y" }} at {{ notice.created_at|date:"P" }}
+                        {% endif %}
+                    </span>
+                </div>
+            </div>
+            {% empty %}
+            <div class="text-center py-12 text-portal-muted">
+                <div class="w-12 h-12 bg-portal-bg text-portal-muted rounded-full flex items-center justify-center mx-auto mb-3">
+                    <i data-lucide="megaphone" class="w-6 h-6"></i>
+                </div>
+                <p class="font-medium">No notices published yet.</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

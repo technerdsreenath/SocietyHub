@@ -12,6 +12,9 @@
         "**/venv": true
     },
     "files.associations": {
-        "*.html": "django-html"
-    }
+    "*.html": "html",
+    "*.py": "python",
+    "*.htm": "html"
 }
+}
+

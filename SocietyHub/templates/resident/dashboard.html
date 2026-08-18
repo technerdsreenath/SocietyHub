@@ -122,23 +122,27 @@
                         <i data-lucide="megaphone" class="w-4 h-4 text-portal-primary"></i>
                         Notice Board
                     </h3>
-                    <a href="#" class="text-[11px] font-bold text-portal-primary hover:underline">View All</a>
+                    <a href="{% url 'notices_list' %}" class="text-[11px] font-bold text-portal-primary hover:underline">View All</a>
                 </div>
                 <div class="p-6 space-y-5">
                     {% for notice in notices %}
                     <div class="space-y-2 border-b border-portal-border last:border-b-0 pb-4 last:pb-0">
                         <div class="flex justify-between items-start gap-2">
                             <h4 class="font-bold text-xs text-portal-text leading-snug">{{ notice.title }}</h4>
-                            <span class="shrink-0 px-2 py-0.5 rounded text-[9px] font-extrabold tracking-wider uppercase {% if notice.priority == 'High' %}bg-rose-50 text-rose-600{% elif notice.priority == 'Medium' %}bg-amber-50 text-amber-600{% else %}bg-green-50 text-green-600{% endif %}">
-                                {{ notice.priority }}
-                            </span>
+                            <span class="text-[9px] bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded font-extrabold tracking-wider uppercase">{{ notice.status|default:"Published" }}</span>
                         </div>
                         <p class="text-[11px] text-portal-muted leading-relaxed font-medium">
                             {{ notice.content }}
                         </p>
-                        <div class="flex items-center justify-between text-[10px] text-portal-muted font-semibold pt-1">
-                            <span class="px-2 py-0.5 bg-portal-bg border border-portal-border rounded">{{ notice.category }}</span>
-                            <span>{{ notice.date }}</span>
+                        <div class="flex items-center gap-1.5 text-[10px] text-portal-muted font-semibold pt-1">
+                            <i data-lucide="clock" class="w-3.5 h-3.5 text-portal-primary"></i>
+                            <span>
+                                {% if notice.notice_date %}
+                                    {{ notice.notice_date|date:"M d, Y" }}{% if notice.notice_time %} at {{ notice.notice_time|time:"P" }}{% endif %}
+                                {% else %}
+                                    {{ notice.created_at|date:"M d, Y" }} at {{ notice.created_at|date:"P" }}
+                                {% endif %}
+                            </span>
                         </div>
                     </div>
                     {% empty %}

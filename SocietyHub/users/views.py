@@ -140,6 +140,7 @@ def chairperson_approvals_view(request):
     ).select_related('user')
     
     return render(request, 'chairperson/approvals.html', {
+        'profile': profile,
         'pending_secretaries': pending_secretaries
     })
 

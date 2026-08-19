@@ -71,6 +71,11 @@ def portal_dashboard(request):
         # Fetch real dynamic stats for chairperson dashboard
         total_residents = UserProfile.objects.filter(society=profile.society, role='resident', is_approved=True).count()
         total_staff = UserProfile.objects.filter(society=profile.society, role__in=['security', 'maintenance'], is_approved=True).count()
+        pending_secretaries = UserProfile.objects.filter(
+            role='secretary',
+            society=profile.society,
+            is_approved=False
+        ).select_related('user')
         context.update({
             'stats': {
                 'total_residents': total_residents,
@@ -84,6 +89,7 @@ def portal_dashboard(request):
             'reports': [],
             'notices': society_notices,
             'active_notices_count': society_notices.count(),
+            'pending_secretaries': pending_secretaries,
         })
         return render(request, 'chairperson/dashboard.html', context)
 

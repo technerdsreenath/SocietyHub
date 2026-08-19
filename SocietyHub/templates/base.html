@@ -89,6 +89,10 @@
                         Complaints
                     </a>
                 {% elif profile.role == 'chairperson' %}
+                    <a href="{% url 'chairperson_approvals' %}" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all {% if request.resolver_match.url_name == 'chairperson_approvals' %}bg-portal-primary/10 text-portal-primary{% else %}text-portal-muted hover:bg-portal-bg hover:text-portal-text{% endif %}">
+                        <i data-lucide="user-check" class="w-4 h-4"></i>
+                        Approvals
+                    </a>
                     <a href="#" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold text-portal-muted hover:bg-portal-bg hover:text-portal-text transition-all">
                         <i data-lucide="wallet" class="w-4 h-4"></i>
                         Finances

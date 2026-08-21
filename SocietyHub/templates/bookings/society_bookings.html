@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+
+{% block title %}Society Bookings - Society Hub{% endblock %}
+
+{% block page_title %}Society Bookings{% endblock %}
+
+{% block content %}
+<div class="space-y-8 pb-24">
+    <!-- Messages Notification -->
+    {% if messages %}
+        <div class="space-y-2">
+            {% for message in messages %}
+                <div class="p-4 rounded-xl text-xs font-semibold border {% if message.tags == 'success' %}bg-green-50 border-green-200 text-green-800{% else %}bg-amber-50 border-amber-200 text-amber-800{% endif %}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <!-- Top Action Area -->
+    <div class="flex justify-between items-center bg-portal-card border border-portal-border rounded-2xl p-6 shadow-card">
+        <div>
+            <h2 class="text-sm font-bold text-portal-text">Society Amenity Bookings</h2>
+            <p class="text-[11px] text-portal-muted mt-1 font-medium">All facility reservation history and upcoming bookings in your society.</p>
+        </div>
+        <a href="{% url 'amenity_list' %}" class="px-4 py-2.5 bg-portal-primary hover:bg-portal-primary/95 text-white font-bold rounded-xl text-xs shadow-flat transition-all flex items-center gap-2">
+            <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i>
+            New Booking
+        </a>
+    </div>
+
+    <!-- Booking History Card -->
+    <div class="bg-portal-card border border-portal-border rounded-2xl shadow-card overflow-hidden">
+        <div class="p-6 border-b border-portal-border flex justify-between items-center bg-[#FCFDFD]">
+            <h3 class="font-bold text-sm text-portal-text flex items-center gap-2">
+                <i data-lucide="calendar-days" class="w-4.5 h-4.5 text-portal-primary"></i>
+                All Records
+            </h3>
+            <span class="px-2.5 py-0.5 bg-portal-bg border border-portal-border text-portal-muted text-[10px] font-bold rounded-full">Society History</span>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs border-collapse">
+                <thead>
+                    <tr class="bg-portal-bg/60 text-portal-muted font-bold border-b border-portal-border">
+                        <th class="p-4">Resident Info</th>
+                        <th class="p-4">Amenity</th>
+                        <th class="p-4">Date</th>
+                        <th class="p-4">Time Slot</th>
+                        <th class="p-4 text-center">Status</th>
+                        <th class="p-4 text-center">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-portal-border">
+                    {% for b in bookings %}
+                    <tr class="hover:bg-portal-bg/10 transition-colors">
+                        <td class="p-4">
+                            <div class="font-bold text-portal-text">{{ b.user.get_full_name|default:b.user.username }}</div>
+                            <div class="text-[10px] text-portal-muted mt-1 space-y-0.5">
+                                <div>Wing: <strong class="text-portal-text font-semibold">{{ b.user.profile.wing|default:"N/A" }}</strong> • Flat: <strong class="text-portal-text font-semibold">{{ b.user.profile.flat_number|default:"N/A" }}</strong></div>
+                                <div>Contact: <strong class="text-portal-text font-semibold">{{ b.user.profile.contact|default:"N/A" }}</strong></div>
+                            </div>
+                        </td>
+                        <td class="p-4 font-bold text-portal-text">{{ b.amenity.name }}</td>
+                        <td class="p-4 font-medium text-portal-muted">{{ b.date_display }}</td>
+                        <td class="p-4 font-semibold text-portal-muted">{{ b.time_range_display }}</td>
+                        <td class="p-4 text-center">
+                            <span class="px-2.5 py-1 rounded-full text-[10px] font-bold border {{ b.status_class }}">
+                                {{ b.status }}
+                            </span>
+                        </td>
+                        <td class="p-4 text-center">
+                            {% if b.status != 'Cancelled' %}
+                                <form method="POST" action="{% url 'cancel_booking' b.id %}?next=society_bookings" onsubmit="return confirm('Are you sure you want to cancel this booking?');" class="inline-block">
+                                    {% csrf_token %}
+                                    <button type="submit" class="px-2.5 py-1 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 rounded-lg text-[10px] font-bold transition-all">
+                                        Cancel Slot
+                                    </button>
+                                </form>
+                            {% else %}
+                                <span class="text-portal-muted italic text-[10px] font-semibold">Cancelled</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="p-8 text-center text-portal-muted font-medium">No bookings recorded in this society.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

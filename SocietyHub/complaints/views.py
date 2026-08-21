@@ -90,16 +90,7 @@ def complete_complaint_view(request, pk):
 
 @login_required
 def close_complaint_view(request, pk):
-    profile = getattr(request.user, 'profile', None)
-    if not profile or profile.role not in ['maintenance', 'security']:
-        return HttpResponseForbidden("Access denied.")
-        
-    complaint = get_object_or_404(Complaint, pk=pk, society=profile.society, assigned_to=request.user)
-    if complaint.status in ['In Progress', 'Completed']:
-        complaint.status = 'Closed'
-        complaint.save()
-        messages.success(request, f"Complaint marked as closed: {complaint.title}")
-    return redirect('complaints_list')
+    return HttpResponseForbidden("Complaints can only be closed via resident/secretary/chairperson acceptance.")
 
 @login_required
 def approve_complaint_resolution(request, pk, feedback):
@@ -108,15 +99,21 @@ def approve_complaint_resolution(request, pk, feedback):
         return HttpResponseForbidden("Access denied.")
     
     complaint = get_object_or_404(Complaint, pk=pk, society=profile.society, created_by=request.user)
-    if complaint.status == 'Closed':
+    if complaint.status == 'Completed':
         if feedback == 'yes':
-            complaint.status = 'Approved'
+            complaint.status = 'Closed'
+            complaint.rejection_reason = None
             complaint.save()
-            messages.success(request, f"Thank you for confirming! Complaint '{complaint.title}' has been marked as approved.")
+            messages.success(request, f"Thank you for confirming! Complaint '{complaint.title}' has been successfully closed.")
         elif feedback == 'no':
-            complaint.status = 'Pending'  # Reopen it back to Pending
-            complaint.assigned_to = None  # Remove assignment
+            rejection_reason = request.POST.get('rejection_reason', '').strip()
+            if not rejection_reason:
+                messages.error(request, "Please provide a reason why the task is incomplete.")
+                return redirect('complaints_list')
+                
+            complaint.status = 'In Progress'
+            complaint.rejection_reason = rejection_reason
             complaint.save()
-            messages.warning(request, f"Complaint '{complaint.title}' has been reopened and returned to the active queue.")
+            messages.warning(request, f"Complaint '{complaint.title}' has been reopened and returned to the resolver's queue.")
             
     return redirect('complaints_list')

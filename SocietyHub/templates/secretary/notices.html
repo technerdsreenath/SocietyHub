@@ -15,6 +15,17 @@
         </button>
     </div>
 
+    <!-- Messages Notification -->
+    {% if messages %}
+    <div class="space-y-2">
+        {% for message in messages %}
+        <div class="p-4 rounded-xl text-xs font-semibold border {% if message.tags == 'success' %}bg-green-50 border-green-200 text-green-800{% elif message.tags == 'error' %}bg-red-50 border-red-200 text-red-800{% else %}bg-amber-50 border-amber-200 text-amber-800{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
     <!-- Notices Listing Card -->
     <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
         <h3 class="text-lg font-bold text-gray-900 mb-6">Active Circulars</h3>
@@ -73,6 +84,7 @@
 
         <form id="noticeForm" method="POST" class="space-y-4">
             {% csrf_token %}
+            <div id="modalError" class="hidden p-4 rounded-xl text-xs font-semibold bg-red-50 border border-red-200 text-red-800"></div>
             <div>
                 <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Notice Title</label>
                 <input type="text" id="inputTitle" name="title" required placeholder="e.g., Water Supply Disruption" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-[#1b3a32]">
@@ -116,7 +128,77 @@
 <script>
     lucide.createIcons();
 
+    function getLocalDateStr() {
+        const d = new Date();
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
+
+    function getLocalTimeStr() {
+        const d = new Date();
+        const hours = String(d.getHours()).padStart(2, '0');
+        const minutes = String(d.getMinutes()).padStart(2, '0');
+        return `${hours}:${minutes}`;
+    }
+
+    function showModalError(msg) {
+        const errorDiv = document.getElementById('modalError');
+        if (errorDiv) {
+            errorDiv.innerText = msg;
+            errorDiv.classList.remove('hidden');
+        }
+    }
+
+    function hideModalError() {
+        const errorDiv = document.getElementById('modalError');
+        if (errorDiv) {
+            errorDiv.classList.add('hidden');
+            errorDiv.innerText = '';
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const dateInput = document.getElementById('inputNoticeDate');
+        if (dateInput) {
+            dateInput.min = getLocalDateStr();
+        }
+
+        const form = document.getElementById('noticeForm');
+        if (form) {
+            form.addEventListener('submit', function(e) {
+                const dateInputVal = document.getElementById('inputNoticeDate').value;
+                const timeInputVal = document.getElementById('inputNoticeTime').value;
+
+                if (timeInputVal && !dateInputVal) {
+                    showModalError("Please select a date if you are setting a time.");
+                    e.preventDefault();
+                    return false;
+                }
+
+                if (dateInputVal) {
+                    const todayDate = getLocalDateStr();
+                    if (dateInputVal < todayDate) {
+                        showModalError("You cannot select a past date.");
+                        e.preventDefault();
+                        return false;
+                    }
+                    if (dateInputVal === todayDate && timeInputVal) {
+                        const todayTime = getLocalTimeStr();
+                        if (timeInputVal < todayTime) {
+                            showModalError("You cannot select a past time for today.");
+                            e.preventDefault();
+                            return false;
+                        }
+                    }
+                }
+            });
+        }
+    });
+
     function openCreateModal() {
+        hideModalError();
         document.getElementById('modalTitle').innerText = 'Create New Notice';
         document.getElementById('noticeForm').action = "{% url 'secretary_notices' %}";
         document.getElementById('inputTitle').value = '';
@@ -142,6 +224,7 @@
     }
 
     function openEditModal(pk, title, content, date, time, status) {
+        hideModalError();
         document.getElementById('modalTitle').innerText = 'Edit Notice';
         // Dynamically build the edit notice URL
         document.getElementById('noticeForm').action = "/users/secretary/notices/" + pk + "/edit/";

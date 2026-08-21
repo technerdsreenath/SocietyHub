@@ -91,6 +91,12 @@
                                 <span>Filed By: <strong class="text-portal-text">{% if task.created_by.get_full_name %}{{ task.created_by.get_full_name }}{% else %}{{ task.created_by.username }}{% endif %}</strong> ({{ task.created_by.profile.get_role_display }})</span>
                                 <span>Date: {{ task.date }}</span>
                             </div>
+                            {% if task.rejection_reason %}
+                            <div class="mt-2 text-[10px] text-red-700 bg-red-50 border border-red-200 p-2.5 rounded-xl font-bold flex items-start gap-1.5">
+                                <i data-lucide="alert-circle" class="w-3.5 h-3.5 mt-0.5 shrink-0"></i>
+                                <span><strong>Feedback / Incomplete Reason:</strong> {{ task.rejection_reason }}</span>
+                            </div>
+                            {% endif %}
                         </div>
                         <div class="flex items-center gap-3">
                             <span class="px-2.5 py-1 rounded-lg text-[10px] font-bold border {{ task.status_class }}">
@@ -104,20 +110,7 @@
                                         Mark Done
                                     </button>
                                 </form>
-                                <form method="POST" action="{% url 'close_complaint' task.id %}">
-                                    {% csrf_token %}
-                                    <button type="submit" class="px-3 py-1.5 bg-gray-600 hover:bg-gray-700 text-white rounded-xl text-[10px] font-bold transition-all shadow-sm">
-                                        Close
-                                    </button>
-                                </form>
                             </div>
-                            {% elif task.status == 'Completed' %}
-                            <form method="POST" action="{% url 'close_complaint' task.id %}">
-                                {% csrf_token %}
-                                <button type="submit" class="px-3 py-1.5 bg-gray-600 hover:bg-gray-700 text-white rounded-xl text-[10px] font-bold transition-all shadow-sm">
-                                    Close
-                                </button>
-                            </form>
                             {% endif %}
                         </div>
                     </div>
@@ -161,6 +154,12 @@
                                 <span>Assigned Resolver: <strong class="text-portal-text">{% if complaint.assigned_to.get_full_name %}{{ complaint.assigned_to.get_full_name }}{% else %}{{ complaint.assigned_to.username }}{% endif %}</strong> ({{ complaint.assigned_to.profile.get_role_display }})</span>
                                 {% endif %}
                             </div>
+                            {% if complaint.rejection_reason %}
+                            <div class="mt-2 text-[10px] text-red-700 bg-red-50 border border-red-200 p-2.5 rounded-xl font-medium flex items-start gap-1.5">
+                                <i data-lucide="alert-circle" class="w-3.5 h-3.5 mt-0.5 shrink-0"></i>
+                                <span><strong>Reported Incomplete:</strong> {{ complaint.rejection_reason }}</span>
+                            </div>
+                            {% endif %}
                         </div>
                         <div class="flex items-center gap-3">
                             <span class="px-2.5 py-1 rounded-lg text-[10px] font-bold border {{ complaint.status_class }}">
@@ -218,9 +217,15 @@
                                 <span class="text-amber-600 font-semibold">Awaiting resolver assignment</span>
                                 {% endif %}
                             </div>
+                            {% if complaint.rejection_reason %}
+                            <div class="mt-2 text-[10px] text-red-700 bg-red-50 border border-red-200 p-2.5 rounded-xl font-medium flex items-start gap-1.5">
+                                <i data-lucide="alert-circle" class="w-3.5 h-3.5 mt-0.5 shrink-0"></i>
+                                <span><strong>Reported Incomplete:</strong> {{ complaint.rejection_reason }}</span>
+                            </div>
+                            {% endif %}
                         </div>
                         <div class="flex items-center gap-3">
-                            {% if complaint.status == 'Closed' %}
+                            {% if complaint.status == 'Completed' %}
                             <div class="flex flex-col items-end gap-1.5">
                                 <span class="text-[10px] text-portal-muted font-bold">Was this resolved successfully?</span>
                                 <div class="flex gap-2">
@@ -230,12 +235,9 @@
                                             Yes
                                         </button>
                                     </form>
-                                    <form method="POST" action="{% url 'approve_complaint_resolution' complaint.id 'no' %}">
-                                        {% csrf_token %}
-                                        <button type="submit" class="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-[10px] font-bold transition-all shadow-sm">
-                                            No
-                                        </button>
-                                    </form>
+                                    <button type="button" onclick="openRejectionModal('{{ complaint.id }}')" class="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-[10px] font-bold transition-all shadow-sm cursor-pointer">
+                                        No
+                                    </button>
                                 </div>
                             </div>
                             {% else %}
@@ -255,4 +257,50 @@
         </div>
     </div>
 </div>
+
+<!-- Rejection Reason Modal -->
+<div id="rejectionModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl relative animate-in fade-in zoom-in duration-200">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-sm font-bold text-gray-900">Why is this task incomplete?</h3>
+            <button onclick="closeRejectionModal()" class="text-gray-400 hover:text-gray-600">
+                <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
+        </div>
+
+        <form id="rejectionForm" method="POST" class="space-y-4">
+            {% csrf_token %}
+            <div>
+                <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Feedback / Reason</label>
+                <textarea id="rejectionReasonInput" name="rejection_reason" rows="4" required placeholder="Explain what is still unresolved..." class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-xs focus:outline-none focus:border-portal-primary"></textarea>
+            </div>
+
+            <div class="flex justify-end gap-2 pt-2">
+                <button type="button" onclick="closeRejectionModal()" class="px-3.5 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-100 rounded-xl transition-all">Cancel</button>
+                <button type="submit" class="px-4 py-2 bg-rose-600 text-white text-xs font-bold rounded-xl hover:bg-rose-700 transition-all shadow-sm">Submit Feedback</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+    function openRejectionModal(complaintId) {
+        const form = document.getElementById('rejectionForm');
+        form.action = `/complaints/${complaintId}/feedback/no/`;
+        document.getElementById('rejectionReasonInput').value = '';
+        document.getElementById('rejectionModal').classList.remove('hidden');
+        document.getElementById('rejectionModal').classList.add('flex');
+        
+        if (window.lucide) {
+            window.lucide.createIcons();
+        }
+    }
+
+    function closeRejectionModal() {
+        document.getElementById('rejectionModal').classList.remove('flex');
+        document.getElementById('rejectionModal').classList.add('hidden');
+    }
+</script>
+{% endblock %}
 {% endblock %}

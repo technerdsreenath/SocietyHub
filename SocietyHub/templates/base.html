@@ -37,8 +37,8 @@
     <!-- Sidebar -->
     <aside id="app-sidebar" class="hidden md:flex fixed top-16 bottom-0 left-0 z-50 w-64 bg-portal-card border-r border-portal-border flex-col justify-between shadow-sidebar shrink-0 overflow-y-auto md:relative md:top-0 md:bottom-auto md:h-full">
         <div>
-            <div class="p-6 border-b border-portal-border flex items-center gap-3">
-                <div class="w-10 h-10 rounded-xl bg-portal-primary flex items-center justify-center text-white">
+            <a href="{% url 'portal_dashboard' %}" class="p-6 border-b border-portal-border flex items-center gap-3 hover:bg-gray-50/80 transition-colors cursor-pointer">
+                <div class="w-10 h-10 rounded-xl bg-portal-primary flex items-center justify-center text-white shrink-0">
                     <i data-lucide="building-2" class="w-5 h-5"></i>
                 </div>
                 <div>
@@ -49,7 +49,7 @@
                         {{ request.user.profile.get_role_display }}
                     </p>
                 </div>
-            </div>
+            </a>
 
             <!-- Role-Based Navigation Links -->
             <nav class="p-4 space-y-1">
@@ -63,15 +63,19 @@
                         <i data-lucide="receipt" class="w-4 h-4"></i>
                         My Bills
                     </a>
-                    <a href="#" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold text-portal-muted hover:bg-portal-bg hover:text-portal-text transition-all">
+                    <a href="{% url 'amenity_list' %}" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all {% if request.resolver_match.url_name == 'amenity_list' %}bg-portal-primary/10 text-portal-primary{% else %}text-portal-muted hover:bg-portal-bg hover:text-portal-text{% endif %}">
                         <i data-lucide="calendar-range" class="w-4 h-4"></i>
                         Book Facilities
+                    </a>
+                    <a href="{% url 'my_bookings' %}" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all {% if request.resolver_match.url_name == 'my_bookings' %}bg-portal-primary/10 text-portal-primary{% else %}text-portal-muted hover:bg-portal-bg hover:text-portal-text{% endif %}">
+                        <i data-lucide="calendar-check" class="w-4 h-4"></i>
+                        My Bookings
                     </a>
                     <a href="{% url 'complaints_list' %}" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all {% if request.resolver_match.url_name == 'complaints_list' %}bg-portal-primary/10 text-portal-primary{% else %}text-portal-muted hover:bg-portal-bg hover:text-portal-text{% endif %}">
                         <i data-lucide="message-square" class="w-4 h-4"></i>
                         Complaints
                     </a>
-                    <a href="#" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold text-portal-muted hover:bg-portal-bg hover:text-portal-text transition-all">
+                    <a href="{% url 'directory' %}" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all {% if request.resolver_match.url_name == 'directory' %}bg-portal-primary/10 text-portal-primary{% else %}text-portal-muted hover:bg-portal-bg hover:text-portal-text{% endif %}">
                         <i data-lucide="users" class="w-4 h-4"></i>
                         Directory
                     </a>
@@ -88,6 +92,18 @@
                         <i data-lucide="list-todo" class="w-4 h-4"></i>
                         Complaints
                     </a>
+                    <a href="{% url 'amenity_list' %}" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all {% if request.resolver_match.url_name == 'amenity_list' %}bg-portal-primary/10 text-portal-primary{% else %}text-portal-muted hover:bg-portal-bg hover:text-portal-text{% endif %}">
+                        <i data-lucide="calendar-range" class="w-4 h-4"></i>
+                        Book Facilities
+                    </a>
+                    <a href="{% url 'society_bookings' %}" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all {% if request.resolver_match.url_name == 'society_bookings' %}bg-portal-primary/10 text-portal-primary{% else %}text-portal-muted hover:bg-portal-bg hover:text-portal-text{% endif %}">
+                        <i data-lucide="calendar-check" class="w-4 h-4"></i>
+                        Society Bookings
+                    </a>
+                    <a href="{% url 'directory' %}" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all {% if request.resolver_match.url_name == 'directory' %}bg-portal-primary/10 text-portal-primary{% else %}text-portal-muted hover:bg-portal-bg hover:text-portal-text{% endif %}">
+                        <i data-lucide="users" class="w-4 h-4"></i>
+                        Directory
+                    </a>
                 {% elif profile.role == 'chairperson' %}
                     <a href="{% url 'chairperson_approvals' %}" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all {% if request.resolver_match.url_name == 'chairperson_approvals' %}bg-portal-primary/10 text-portal-primary{% else %}text-portal-muted hover:bg-portal-bg hover:text-portal-text{% endif %}">
                         <i data-lucide="user-check" class="w-4 h-4"></i>
@@ -97,9 +113,9 @@
                         <i data-lucide="wallet" class="w-4 h-4"></i>
                         Finances
                     </a>
-                    <a href="#" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold text-portal-muted hover:bg-portal-bg hover:text-portal-text transition-all">
+                    <a href="{% url 'directory' %}" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all {% if request.resolver_match.url_name == 'directory' %}bg-portal-primary/10 text-portal-primary{% else %}text-portal-muted hover:bg-portal-bg hover:text-portal-text{% endif %}">
                         <i data-lucide="users" class="w-4 h-4"></i>
-                        Manage Users
+                        Directory
                     </a>
                     <a href="#" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold text-portal-muted hover:bg-portal-bg hover:text-portal-text transition-all">
                         <i data-lucide="bar-chart-3" class="w-4 h-4"></i>
@@ -108,6 +124,14 @@
                     <a href="{% url 'complaints_list' %}" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all {% if request.resolver_match.url_name == 'complaints_list' %}bg-portal-primary/10 text-portal-primary{% else %}text-portal-muted hover:bg-portal-bg hover:text-portal-text{% endif %}">
                         <i data-lucide="message-square" class="w-4 h-4"></i>
                         Complaints
+                    </a>
+                    <a href="{% url 'amenity_list' %}" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all {% if request.resolver_match.url_name == 'amenity_list' %}bg-portal-primary/10 text-portal-primary{% else %}text-portal-muted hover:bg-portal-bg hover:text-portal-text{% endif %}">
+                        <i data-lucide="calendar-range" class="w-4 h-4"></i>
+                        Book Facilities
+                    </a>
+                    <a href="{% url 'society_bookings' %}" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all {% if request.resolver_match.url_name == 'society_bookings' %}bg-portal-primary/10 text-portal-primary{% else %}text-portal-muted hover:bg-portal-bg hover:text-portal-text{% endif %}">
+                        <i data-lucide="calendar-check" class="w-4 h-4"></i>
+                        Society Bookings
                     </a>
 
                 {% elif profile.role == 'security' %}
@@ -119,11 +143,19 @@
                         <i data-lucide="message-square" class="w-4 h-4"></i>
                         Complaints
                     </a>
+                    <a href="{% url 'directory' %}" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all {% if request.resolver_match.url_name == 'directory' %}bg-portal-primary/10 text-portal-primary{% else %}text-portal-muted hover:bg-portal-bg hover:text-portal-text{% endif %}">
+                        <i data-lucide="users" class="w-4 h-4"></i>
+                        Directory
+                    </a>
 
                 {% elif profile.role == 'maintenance' %}
                     <a href="{% url 'complaints_list' %}" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all {% if request.resolver_match.url_name == 'complaints_list' %}bg-portal-primary/10 text-portal-primary{% else %}text-portal-muted hover:bg-portal-bg hover:text-portal-text{% endif %}">
                         <i data-lucide="check-square" class="w-4 h-4"></i>
                         Complaints / Tasks
+                    </a>
+                    <a href="{% url 'directory' %}" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all {% if request.resolver_match.url_name == 'directory' %}bg-portal-primary/10 text-portal-primary{% else %}text-portal-muted hover:bg-portal-bg hover:text-portal-text{% endif %}">
+                        <i data-lucide="users" class="w-4 h-4"></i>
+                        Directory
                     </a>
                 {% endif %}
             </nav>

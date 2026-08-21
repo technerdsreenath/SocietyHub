@@ -228,20 +228,43 @@ def portal_dashboard(request):
         
     return render(request, 'secretary/dashboard.html', context)
 
-@login_required
-def secretary_notices_view(request):
-    profile = getattr(request.user, 'profile', None)
-    if not profile or profile.role != 'secretary':
-        return HttpResponseForbidden()
+def validate_notice_datetime(notice_date_str, notice_time_str):
+    import datetime
+    from django.utils import timezone
     
-    # Fetch real notices from the database for the secretary's society
-    notices = Notice.objects.filter(society=profile.society).order_by('-created_at')
+    parsed_date = None
+    parsed_time = None
     
-    context = {
-        'profile': profile,
-        'notices': notices,
-    }
-    return render(request, 'secretary/notices.html', context)
+    if notice_date_str:
+        try:
+            parsed_date = datetime.datetime.strptime(notice_date_str, '%Y-%m-%d').date()
+        except ValueError:
+            pass
+            
+    if notice_time_str:
+        try:
+            parsed_time = datetime.datetime.strptime(notice_time_str, '%H:%M').time()
+        except ValueError:
+            try:
+                parsed_time = datetime.datetime.strptime(notice_time_str, '%H:%M:%S').time()
+            except ValueError:
+                pass
+                
+    if parsed_time and not parsed_date:
+        return False, "Please select a date if you are setting a time."
+                
+    if parsed_date:
+        local_now = timezone.localtime(timezone.now())
+        current_date = local_now.date()
+        current_time = local_now.time()
+        
+        if parsed_date < current_date:
+            return False, "You cannot select a past date."
+        elif parsed_date == current_date and parsed_time:
+            if parsed_time.replace(second=0, microsecond=0) < current_time.replace(second=0, microsecond=0):
+                return False, "You cannot select a past time for today."
+                
+    return True, None
 
 @login_required
 def secretary_notices_view(request):
@@ -257,14 +280,19 @@ def secretary_notices_view(request):
         notice_time = request.POST.get('notice_time') or None
         
         if title and content:
-            Notice.objects.create(
-                society=profile.society,
-                title=title,
-                content=content,
-                status=status,
-                notice_date=notice_date,
-                notice_time=notice_time
-            )
+            is_valid, error_msg = validate_notice_datetime(notice_date, notice_time)
+            if not is_valid:
+                messages.error(request, error_msg)
+            else:
+                Notice.objects.create(
+                    society=profile.society,
+                    title=title,
+                    content=content,
+                    status=status,
+                    notice_date=notice_date,
+                    notice_time=notice_time
+                )
+                messages.success(request, "Notice published successfully!")
             return redirect('secretary_notices')
 
     notices = Notice.objects.filter(society=profile.society).order_by('-created_at')
@@ -305,13 +333,17 @@ def edit_notice_view(request, pk):
         notice_time = request.POST.get('notice_time') or None
         
         if title and content:
-            notice.title = title
-            notice.content = content
-            notice.status = status
-            notice.notice_date = notice_date
-            notice.notice_time = notice_time
-            notice.save()
-            messages.success(request, "Notice updated successfully!")
+            is_valid, error_msg = validate_notice_datetime(notice_date, notice_time)
+            if not is_valid:
+                messages.error(request, error_msg)
+            else:
+                notice.title = title
+                notice.content = content
+                notice.status = status
+                notice.notice_date = notice_date
+                notice.notice_time = notice_time
+                notice.save()
+                messages.success(request, "Notice updated successfully!")
             
     return redirect('secretary_notices')
 
@@ -534,3 +566,73 @@ def approve_user_view(request, profile_id):
         )
         
     return redirect('admin_approvals')
+
+@login_required
+def directory_view(request):
+    try:
+        profile = request.user.profile
+    except Exception:
+        return HttpResponseForbidden("You do not have an active profile.")
+
+    if not profile.is_approved:
+        return render(request, 'auth/pending_approval.html', {'profile': profile})
+
+    # Fetch all approved profiles in the same society
+    members = UserProfile.objects.filter(
+        society=profile.society,
+        is_approved=True
+    ).select_related('user')
+
+    # Sorting hierarchy:
+    # 1. Chairperson
+    # 2. Secretary (wing-wise)
+    # 3. Resident (wing-wise)
+    # 4. Maintenance Staff
+    # 5. Security Guard
+    role_order = {
+        'chairperson': 1,
+        'secretary': 2,
+        'resident': 3,
+        'maintenance': 4,
+        'security': 5,
+    }
+
+    sorted_members = sorted(
+        members,
+        key=lambda m: (
+            role_order.get(m.role, 99),
+            (m.wing or '').lower(),
+            (m.flat_number or '').lower(),
+            (m.user.get_full_name() or m.user.username).lower()
+        )
+    )
+
+    context = {
+        'profile': profile,
+        'members': sorted_members,
+        'role': profile.role,
+    }
+    return render(request, 'resident/directory.html', context)
+
+@login_required
+def change_resident_type(request, pk):
+    try:
+        profile = request.user.profile
+    except Exception:
+        return HttpResponseForbidden()
+
+    if profile.role != 'secretary':
+        return HttpResponseForbidden("Only secretaries are authorized to perform this action.")
+
+    resident_profile = get_object_or_404(UserProfile, pk=pk, role='resident', society=profile.society)
+    
+    if request.method == 'POST':
+        new_type = request.POST.get('resident_type')
+        if new_type in ['owner', 'tenant']:
+            resident_profile.resident_type = new_type
+            resident_profile.save()
+            messages.success(request, f"Successfully changed {resident_profile.user.get_full_name() or resident_profile.user.username} to {new_type.capitalize()}.")
+        else:
+            messages.error(request, "Invalid resident type selected.")
+
+    return redirect('directory')

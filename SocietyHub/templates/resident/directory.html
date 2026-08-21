@@ -1,0 +1,318 @@
+{% extends 'base.html' %}
+
+{% block title %}Society Directory - Society Hub{% endblock %}
+
+{% block page_title %}Society Directory{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Messages Notification -->
+    {% if messages %}
+        <div class="space-y-2">
+            {% for message in messages %}
+                <div class="p-4 rounded-xl text-xs font-semibold border {% if message.tags == 'success' %}bg-green-50 border-green-200 text-green-800{% else %}bg-amber-50 border-amber-200 text-amber-800{% endif %}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <!-- Top Info Block -->
+    <div class="bg-portal-card border border-portal-border rounded-2xl p-6 shadow-card flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+            <h2 class="text-sm font-bold text-portal-text">Society Resident & Staff Directory</h2>
+            <p class="text-[11px] text-portal-muted mt-1 font-medium">Contact information and directory of all verified residents and staff in <strong>{{ profile.society.name }}</strong>.</p>
+        </div>
+        
+        <!-- Frontend search input -->
+        <div class="relative w-full md:w-72">
+            <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-portal-muted">
+                <i data-lucide="search" class="w-4 h-4"></i>
+            </span>
+            <input type="text" id="directorySearch" placeholder="Search by name, wing, flat..." class="w-full pl-10 pr-4 py-2 bg-portal-bg border border-portal-border rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-portal-primary font-medium">
+        </div>
+    </div>
+
+    <!-- Mobile view (Card grid - visible on small screens only) -->
+    <div id="mobileDirectoryGrid" class="grid grid-cols-1 gap-4 md:hidden">
+        {% for member in members %}
+        <div class="bg-portal-card border border-portal-border rounded-2xl p-5 shadow-card space-y-4 directory-card">
+            <!-- Header: Avatar, Name, Role Badge, Resident Type Badge -->
+            <div class="flex items-start justify-between gap-3">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-full bg-portal-primary/10 text-portal-primary flex items-center justify-center font-bold text-xs uppercase shrink-0">
+                        {{ member.user.username|slice:":2" }}
+                    </div>
+                    <div>
+                        <h4 class="member-name font-bold text-sm text-portal-text">{{ member.user.get_full_name|default:member.user.username }}</h4>
+                        <!-- Role Badge -->
+                        <div class="flex flex-wrap gap-1.5 mt-1">
+                            {% if member.role == 'chairperson' %}
+                                <span class="px-2 py-0.5 bg-amber-50 text-amber-800 border border-amber-200 rounded-full text-[9px] font-bold">Chairperson</span>
+                            {% elif member.role == 'secretary' %}
+                                <span class="px-2 py-0.5 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-full text-[9px] font-bold">Secretary</span>
+                            {% elif member.role == 'resident' %}
+                                <span class="px-2 py-0.5 bg-blue-50 text-blue-800 border border-blue-200 rounded-full text-[9px] font-bold">Resident</span>
+                            {% elif member.role == 'maintenance' %}
+                                <span class="px-2 py-0.5 bg-orange-50 text-orange-800 border border-orange-200 rounded-full text-[9px] font-bold">Maintenance Staff</span>
+                            {% elif member.role == 'security' %}
+                                <span class="px-2 py-0.5 bg-slate-100 text-slate-800 border border-slate-300 rounded-full text-[9px] font-bold">Security Guard</span>
+                            {% endif %}
+                            
+                            {% if role != 'maintenance' and role != 'security' and member.role == 'resident' %}
+                                {% if member.resident_type == 'owner' %}
+                                    <span class="px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded text-[9px] font-extrabold uppercase tracking-wide">Owner</span>
+                                {% else %}
+                                    <span class="px-2 py-0.5 bg-cyan-50 text-cyan-700 rounded text-[9px] font-extrabold uppercase tracking-wide">Tenant</span>
+                                {% endif %}
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Details Block -->
+            <div class="grid grid-cols-2 gap-y-3 gap-x-4 border-t border-portal-border pt-4 text-xs font-medium">
+                <div>
+                    <span class="text-portal-muted text-[10px] uppercase font-bold tracking-wider block">Wing</span>
+                    <span class="member-wing text-portal-text mt-0.5 block">
+                        {% if member.wing %}
+                            <span class="px-2 py-0.5 bg-portal-bg border border-portal-border rounded-lg text-xs font-semibold">
+                                {{ member.wing }}
+                            </span>
+                        {% else %}
+                            -
+                        {% endif %}
+                    </span>
+                </div>
+                <div>
+                    <span class="text-portal-muted text-[10px] uppercase font-bold tracking-wider block">Flat Number</span>
+                    <span class="member-flat text-portal-text mt-0.5 block font-semibold">{{ member.flat_number|default:"-" }}</span>
+                </div>
+                
+                {% if role != 'maintenance' and role != 'security' %}
+                <div>
+                    <span class="text-portal-muted text-[10px] uppercase font-bold tracking-wider block">Flat Name</span>
+                    <span class="member-flatname text-portal-text mt-0.5 block">{{ member.flat_name|default:"-" }}</span>
+                </div>
+                <div>
+                    <span class="text-portal-muted text-[10px] uppercase font-bold tracking-wider block">Contact</span>
+                    {% if member.contact %}
+                        <a href="tel:{{ member.contact }}" class="text-portal-primary hover:underline mt-0.5 flex items-center gap-1.5 font-bold tracking-wide">
+                            <i data-lucide="phone" class="w-3.5 h-3.5 shrink-0 text-portal-primary"></i>
+                            {{ member.contact }}
+                        </a>
+                    {% else %}
+                        <span class="text-portal-muted mt-0.5 block">-</span>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Secretary Actions -->
+            {% if role == 'secretary' and member.role == 'resident' %}
+            <div class="border-t border-portal-border pt-3.5 flex items-center justify-between gap-4">
+                <span class="text-[10px] text-portal-muted uppercase font-bold tracking-wider">Manage Status</span>
+                <form action="{% url 'change_resident_type' member.pk %}" method="POST" class="inline">
+                    {% csrf_token %}
+                    <select name="resident_type" onchange="this.form.submit()" class="text-xs bg-portal-bg border border-portal-border rounded-xl px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-portal-primary font-bold text-portal-text transition-colors cursor-pointer">
+                        <option value="owner" {% if member.resident_type == 'owner' %}selected{% endif %}>Owner</option>
+                        <option value="tenant" {% if member.resident_type == 'tenant' %}selected{% endif %}>Tenant</option>
+                    </select>
+                </form>
+            </div>
+            {% endif %}
+        </div>
+        {% empty %}
+        <div class="bg-portal-card border border-portal-border rounded-2xl p-8 text-center text-portal-muted font-medium">
+            No Members Found
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Desktop view (Table - visible on tablet and desktop) -->
+    <div id="desktopDirectoryTable" class="bg-portal-card border border-portal-border rounded-2xl shadow-card overflow-hidden hidden md:block">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs border-collapse">
+                <thead>
+                    <tr class="bg-portal-bg/60 text-portal-muted font-bold border-b border-portal-border uppercase tracking-wider text-[10px] whitespace-nowrap">
+                        <th class="p-4">Name</th>
+                        <th class="p-4">Wing</th>
+                        <th class="p-4">Flat Number</th>
+                        {% if role != 'maintenance' and role != 'security' %}
+                            <th class="p-4">Flat Name</th>
+                            <th class="p-4">Contact Number</th>
+                            <th class="p-4">Role</th>
+                            {% if role == 'secretary' %}
+                                <th class="p-4 text-center">Manage Status</th>
+                            {% endif %}
+                        {% endif %}
+                    </tr>
+                </thead>
+                <tbody id="directoryTableBody" class="divide-y divide-portal-border">
+                    {% for member in members %}
+                    <tr class="hover:bg-portal-bg/20 transition-colors directory-row whitespace-nowrap">
+                        <!-- Name -->
+                        <td class="p-4 font-bold text-portal-text">
+                            <div class="flex items-center gap-3">
+                                <div class="w-8 h-8 rounded-full bg-portal-primary/10 text-portal-primary flex items-center justify-center font-bold text-[11px] shrink-0 uppercase">
+                                    {{ member.user.username|slice:":2" }}
+                                </div>
+                                <div>
+                                    <span class="member-name font-bold text-xs">{{ member.user.get_full_name|default:member.user.username }}</span>
+                                    {% if role != 'maintenance' and role != 'security' and member.role == 'resident' %}
+                                        <div class="mt-0.5">
+                                            {% if member.resident_type == 'owner' %}
+                                                <span class="px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded text-[9px] font-extrabold uppercase tracking-wide">Owner</span>
+                                            {% else %}
+                                                <span class="px-2 py-0.5 bg-cyan-50 text-cyan-700 rounded text-[9px] font-extrabold uppercase tracking-wide">Tenant</span>
+                                            {% endif %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </td>
+                        
+                        <!-- Wing -->
+                        <td class="p-4 text-portal-text font-semibold member-wing">
+                            {% if member.wing %}
+                                <span class="px-2 py-1 bg-portal-bg border border-portal-border rounded-lg text-xs font-semibold inline-block whitespace-nowrap">
+                                    {{ member.wing }}
+                                </span>
+                            {% else %}
+                                <span class="text-portal-muted font-normal text-xs">-</span>
+                            {% endif %}
+                        </td>
+                        
+                        <!-- Flat Number -->
+                        <td class="p-4 text-portal-text font-semibold member-flat">
+                            {{ member.flat_number|default:"-" }}
+                        </td>
+                        
+                        {% if role != 'maintenance' and role != 'security' %}
+                            <!-- Flat Name -->
+                            <td class="p-4 text-portal-muted font-medium member-flatname">
+                                {{ member.flat_name|default:"-" }}
+                            </td>
+                            
+                            <!-- Contact Number -->
+                            <td class="p-4 text-portal-text font-bold tracking-wide">
+                                {% if member.contact %}
+                                    <span class="flex items-center gap-1.5">
+                                        <i data-lucide="phone" class="w-3.5 h-3.5 text-portal-primary"></i>
+                                        {{ member.contact }}
+                                    </span>
+                                {% else %}
+                                    <span class="text-portal-muted font-normal">-</span>
+                                {% endif %}
+                            </td>
+                            
+                            <!-- Role -->
+                            <td class="p-4">
+                                {% if member.role == 'chairperson' %}
+                                    <span class="px-2.5 py-1 bg-amber-50 text-amber-800 border border-amber-200 rounded-full text-[10px] font-bold">
+                                        Chairperson
+                                    </span>
+                                {% elif member.role == 'secretary' %}
+                                    <span class="px-2.5 py-1 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-full text-[10px] font-bold">
+                                        Secretary
+                                    </span>
+                                {% elif member.role == 'resident' %}
+                                    <span class="px-2.5 py-1 bg-blue-50 text-blue-800 border border-blue-200 rounded-full text-[10px] font-bold">
+                                        Resident
+                                    </span>
+                                {% elif member.role == 'maintenance' %}
+                                    <span class="px-2.5 py-1 bg-orange-50 text-orange-800 border border-orange-200 rounded-full text-[10px] font-bold">
+                                        Maintenance Staff
+                                    </span>
+                                {% elif member.role == 'security' %}
+                                    <span class="px-2.5 py-1 bg-slate-100 text-slate-800 border border-slate-300 rounded-full text-[10px] font-bold">
+                                        Security Guard
+                                    </span>
+                                {% endif %}
+                            </td>
+                            
+                            <!-- Secretary Occupancy Change Action -->
+                            {% if role == 'secretary' %}
+                                <td class="p-4 text-center">
+                                    {% if member.role == 'resident' %}
+                                        <form action="{% url 'change_resident_type' member.pk %}" method="POST" class="inline-flex items-center gap-1">
+                                            {% csrf_token %}
+                                            <select name="resident_type" onchange="this.form.submit()" class="text-xs bg-portal-bg border border-portal-border rounded-xl px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-portal-primary font-bold text-portal-text transition-colors cursor-pointer">
+                                                <option value="owner" {% if member.resident_type == 'owner' %}selected{% endif %}>Owner</option>
+                                                <option value="tenant" {% if member.resident_type == 'tenant' %}selected{% endif %}>Tenant</option>
+                                            </select>
+                                        </form>
+                                    {% else %}
+                                        <span class="text-portal-muted text-[10px] font-medium italic">Not Applicable</span>
+                                    {% endif %}
+                                </td>
+                            {% endif %}
+                        {% endif %}
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="p-8 text-center text-portal-muted font-medium">
+                            <div class="flex flex-col items-center justify-center gap-3">
+                                <div class="w-12 h-12 rounded-full bg-portal-bg flex items-center justify-center text-portal-muted">
+                                    <i data-lucide="users" class="w-6 h-6"></i>
+                                </div>
+                                <div>
+                                    <h4 class="font-bold text-portal-text text-sm">No Members Found</h4>
+                                    <p class="text-xs text-portal-muted mt-0.5">There are no approved profiles in the society directory.</p>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Search filtering logic
+    document.addEventListener('DOMContentLoaded', function() {
+        const searchInput = document.getElementById('directorySearch');
+        const rows = document.querySelectorAll('.directory-row');
+        const cards = document.querySelectorAll('.directory-card');
+
+        if (searchInput) {
+            searchInput.addEventListener('input', function() {
+                const query = searchInput.value.toLowerCase().trim();
+                
+                // Filter desktop rows
+                rows.forEach(row => {
+                    const nameText = row.querySelector('.member-name') ? row.querySelector('.member-name').textContent.toLowerCase() : '';
+                    const wingText = row.querySelector('.member-wing') ? row.querySelector('.member-wing').textContent.toLowerCase() : '';
+                    const flatText = row.querySelector('.member-flat') ? row.querySelector('.member-flat').textContent.toLowerCase() : '';
+                    const flatNameText = row.querySelector('.member-flatname') ? row.querySelector('.member-flatname').textContent.toLowerCase() : '';
+
+                    if (nameText.includes(query) || wingText.includes(query) || flatText.includes(query) || flatNameText.includes(query)) {
+                        row.style.display = '';
+                    } else {
+                        row.style.display = 'none';
+                    }
+                });
+
+                // Filter mobile cards
+                cards.forEach(card => {
+                    const nameText = card.querySelector('.member-name') ? card.querySelector('.member-name').textContent.toLowerCase() : '';
+                    const wingText = card.querySelector('.member-wing') ? card.querySelector('.member-wing').textContent.toLowerCase() : '';
+                    const flatText = card.querySelector('.member-flat') ? card.querySelector('.member-flat').textContent.toLowerCase() : '';
+                    const flatNameText = card.querySelector('.member-flatname') ? card.querySelector('.member-flatname').textContent.toLowerCase() : '';
+
+                    if (nameText.includes(query) || wingText.includes(query) || flatText.includes(query) || flatNameText.includes(query)) {
+                        card.style.display = '';
+                    } else {
+                        card.style.display = 'none';
+                    }
+                });
+            });
+        }
+    });
+</script>
+{% endblock %}

@@ -49,6 +49,8 @@ urlpatterns = [
     path('secretary/dashboard/', views.secretary_approvals_view, name='secretary_dashboard'),
     path('notices/', views.notices_list_view, name='notices_list'),
     path('secretary/notices/<int:pk>/edit/', views.edit_notice_view, name='edit_notice'),
+    path('directory/', views.directory_view, name='directory'),
+    path('directory/change-type/<int:pk>/', views.change_resident_type, name='change_resident_type'),
 ]
 
 

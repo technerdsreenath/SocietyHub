@@ -8,6 +8,7 @@ urlpatterns = [
     path('users/', include('SocietyHub.users.urls')),
     path('visitors/', include('SocietyHub.visitors.urls')),
     path('complaints/', include('SocietyHub.complaints.urls')),
+    path('bookings/', include('SocietyHub.bookings.urls')),
     path('', include('SocietyHub.core.urls')),
 
     # Add these right here so /superadmin/approvals/ opens directly:

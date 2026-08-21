@@ -45,6 +45,13 @@ class UserProfile(models.Model):
     flat_name = models.CharField(max_length=100, blank=True, null=True)
     area_sqft = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
     
+    # Resident type: Owner or Tenant
+    RESIDENT_TYPE_CHOICES = [
+        ('owner', 'Owner'),
+        ('tenant', 'Tenant'),
+    ]
+    resident_type = models.CharField(max_length=10, choices=RESIDENT_TYPE_CHOICES, default='owner')
+    
     # Approval status within the society (Approved by Chairperson/Secretary)
     is_approved = models.BooleanField(default=False)
 

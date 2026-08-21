@@ -29,11 +29,15 @@ def portal_dashboard(request):
         from SocietyHub.complaints.models import Complaint
         user_complaints = Complaint.objects.filter(created_by=request.user, society=profile.society).order_by('-created_at')[:5]
         
-        # Add empty data lists for resident dashboard (no backend models for bills/bookings yet)
+        # Fetch real bookings from the database for this resident
+        from SocietyHub.bookings.models import AmenityBooking
+        user_bookings = AmenityBooking.objects.filter(user=request.user).order_by('-booking_date', '-start_time')[:5]
+        
+        # Add empty data lists for resident dashboard (no backend models for bills yet)
         context.update({
             'bills': [],
             'notices': society_notices,
-            'bookings': [],
+            'bookings': user_bookings,
             'complaints': user_complaints
         })
         return render(request, 'resident/dashboard.html', context)
@@ -53,6 +57,12 @@ def portal_dashboard(request):
         from SocietyHub.complaints.models import Complaint
         active_complaints_count = Complaint.objects.filter(society=profile.society).exclude(status='Closed').count()
 
+        # Fetch all amenity bookings for the secretary's society
+        from SocietyHub.bookings.models import AmenityBooking
+        society_bookings = AmenityBooking.objects.filter(
+            amenity__society=profile.society
+        ).select_related('amenity', 'user', 'user__profile').order_by('-booking_date', '-start_time')
+
         context.update({
             'pending_count': pending_profiles.count(),
             'pending_approvals_count': pending_profiles.count(),
@@ -61,6 +71,7 @@ def portal_dashboard(request):
             'active_complaints_count': active_complaints_count,
             'active_notices_count': society_notices.count(),
             'notices': society_notices[:2],  # Shows recent notices dynamically on the dashboard
+            'bookings': society_bookings,
         })
         return render(request, 'secretary/dashboard.html', context)
     
@@ -76,6 +87,12 @@ def portal_dashboard(request):
             society=profile.society,
             is_approved=False
         ).select_related('user')
+        # Fetch all amenity bookings for the chairperson's society
+        from SocietyHub.bookings.models import AmenityBooking
+        society_bookings = AmenityBooking.objects.filter(
+            amenity__society=profile.society
+        ).select_related('amenity', 'user', 'user__profile').order_by('-booking_date', '-start_time')
+
         context.update({
             'stats': {
                 'total_residents': total_residents,
@@ -90,6 +107,7 @@ def portal_dashboard(request):
             'notices': society_notices,
             'active_notices_count': society_notices.count(),
             'pending_secretaries': pending_secretaries,
+            'bookings': society_bookings,
         })
         return render(request, 'chairperson/dashboard.html', context)
 
@@ -123,6 +141,7 @@ def portal_dashboard(request):
                 'location': f"{comp.created_by.profile.wing or ''} - {comp.created_by.profile.flat_number or ''}",
                 'status': comp.status,
                 'status_color': status_color,
+                'rejection_reason': comp.rejection_reason,
             })
             
         context.update({

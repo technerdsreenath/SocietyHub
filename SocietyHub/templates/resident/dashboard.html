@@ -26,7 +26,7 @@
             </div>
             <span class="font-bold text-xs">Pay Maintenance</span>
         </a>
-        <a href="#" class="p-5 bg-portal-card border border-portal-border rounded-2xl shadow-card flex flex-col items-center justify-center text-center group hover:border-portal-primary hover:shadow-lg transition-all">
+        <a href="{% url 'amenity_list' %}" class="p-5 bg-portal-card border border-portal-border rounded-2xl shadow-card flex flex-col items-center justify-center text-center group hover:border-portal-primary hover:shadow-lg transition-all">
             <div class="w-12 h-12 rounded-xl bg-portal-secondary/10 text-portal-secondary flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
                 <i data-lucide="key-round" class="w-5 h-5"></i>
             </div>
@@ -38,7 +38,7 @@
             </div>
             <span class="font-bold text-xs">File Complaint</span>
         </a>
-        <a href="#" class="p-5 bg-portal-card border border-portal-border rounded-2xl shadow-card flex flex-col items-center justify-center text-center group hover:border-portal-primary hover:shadow-lg transition-all">
+        <a href="{% url 'directory' %}" class="p-5 bg-portal-card border border-portal-border rounded-2xl shadow-card flex flex-col items-center justify-center text-center group hover:border-portal-primary hover:shadow-lg transition-all">
             <div class="w-12 h-12 rounded-xl bg-amber-50 text-amber-500 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
                 <i data-lucide="book-open" class="w-5 h-5"></i>
             </div>
@@ -90,7 +90,7 @@
                         <i data-lucide="calendar" class="w-4 h-4 text-portal-primary"></i>
                         My Bookings
                     </h3>
-                    <a href="#" class="text-[11px] font-bold text-portal-primary hover:underline">New Booking</a>
+                    <a href="{% url 'amenity_list' %}" class="text-[11px] font-bold text-portal-primary hover:underline">New Booking</a>
                 </div>
                 <div class="p-4 space-y-3">
                     {% for booking in bookings %}

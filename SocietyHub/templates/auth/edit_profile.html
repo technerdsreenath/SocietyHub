@@ -41,7 +41,7 @@
                 </div>
                 <div>
                     <h1 class="font-bold text-portal-text text-base tracking-tight">Edit Profile</h1>
-                    <p class="text-xs text-portal-muted font-medium">Role: <span class="capitalize text-portal-primary font-bold">{{ profile.get_role_display }}</span></p>
+                    <p class="text-xs text-portal-muted font-medium">Role: <span class="capitalize text-portal-primary font-bold">{% if profile.role == 'resident' %}Resident / {{ profile.get_resident_type_display }}{% else %}{{ profile.get_role_display }}{% endif %}</span></p>
                 </div>
             </div>
             <a href="{% url 'portal_dashboard' %}" class="text-xs font-bold text-portal-muted hover:text-portal-primary flex items-center gap-1 transition-all">

@@ -12,9 +12,14 @@
             <h2 class="text-xl font-bold">Welcome back, {% if user.get_full_name %}{{ user.get_full_name }}{% else %}{{ user.username }}{% endif %}!</h2>
             <p class="text-xs text-white/80 mt-1">You are logged in to the resident portal of <strong class="text-white">{{ profile.society.name }}</strong> (Wing: {{ profile.wing }}, Flat: {{ profile.flat_number }}).</p>
         </div>
-        <div class="px-4 py-2 bg-white/10 rounded-xl backdrop-blur-md text-xs font-semibold flex items-center gap-2">
-            <span class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
-            Profile Verified
+        <div class="flex flex-wrap items-center gap-2.5">
+            <span class="px-3 py-1.5 bg-white/15 border border-white/20 rounded-xl backdrop-blur-md text-xs font-bold uppercase tracking-wider">
+                Resident / {{ profile.get_resident_type_display }}
+            </span>
+            <div class="px-4 py-2 bg-white/10 rounded-xl backdrop-blur-md text-xs font-semibold flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
+                Profile Verified
+            </div>
         </div>
     </div>
 

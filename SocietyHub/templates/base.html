@@ -46,7 +46,11 @@
                         {% if request.user.profile.society %}{{ request.user.profile.society.name }}{% else %}Society Hub{% endif %}
                     </h2>
                     <p class="text-[10px] text-portal-muted font-bold uppercase tracking-wider mt-0.5">
-                        {{ request.user.profile.get_role_display }}
+                        {% if request.user.profile.role == 'resident' %}
+                            Resident / {{ request.user.profile.get_resident_type_display }}
+                        {% else %}
+                            {{ request.user.profile.get_role_display }}
+                        {% endif %}
                     </p>
                 </div>
             </a>

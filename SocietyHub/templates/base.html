@@ -63,9 +63,9 @@
                 </a>
 
                 {% if profile.role == 'resident' %}
-                    <a href="#" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold text-portal-muted hover:bg-portal-bg hover:text-portal-text transition-all">
+                    <a href="{% url 'billing_home' %}" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all {% if 'billing' in request.path %}bg-portal-primary/10 text-portal-primary{% else %}text-portal-muted hover:bg-portal-bg hover:text-portal-text{% endif %}">
                         <i data-lucide="receipt" class="w-4 h-4"></i>
-                        My Bills
+                        My Bills & Dues
                     </a>
                     <a href="{% url 'amenity_list' %}" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all {% if request.resolver_match.url_name == 'amenity_list' %}bg-portal-primary/10 text-portal-primary{% else %}text-portal-muted hover:bg-portal-bg hover:text-portal-text{% endif %}">
                         <i data-lucide="calendar-range" class="w-4 h-4"></i>
@@ -96,6 +96,10 @@
                         <i data-lucide="list-todo" class="w-4 h-4"></i>
                         Complaints
                     </a>
+                    <a href="{% url 'billing_home' %}" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all {% if 'billing' in request.path %}bg-portal-primary/10 text-portal-primary{% else %}text-portal-muted hover:bg-portal-bg hover:text-portal-text{% endif %}">
+                        <i data-lucide="receipt" class="w-4 h-4"></i>
+                        Dues & Receipts
+                    </a>
                     <a href="{% url 'amenity_list' %}" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all {% if request.resolver_match.url_name == 'amenity_list' %}bg-portal-primary/10 text-portal-primary{% else %}text-portal-muted hover:bg-portal-bg hover:text-portal-text{% endif %}">
                         <i data-lucide="calendar-range" class="w-4 h-4"></i>
                         Book Facilities
@@ -113,9 +117,9 @@
                         <i data-lucide="user-check" class="w-4 h-4"></i>
                         Approvals
                     </a>
-                    <a href="#" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold text-portal-muted hover:bg-portal-bg hover:text-portal-text transition-all">
+                    <a href="{% url 'billing_home' %}" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all {% if 'billing' in request.path %}bg-portal-primary/10 text-portal-primary{% else %}text-portal-muted hover:bg-portal-bg hover:text-portal-text{% endif %}">
                         <i data-lucide="wallet" class="w-4 h-4"></i>
-                        Finances
+                        Finances & Dues
                     </a>
                     <a href="{% url 'directory' %}" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all {% if request.resolver_match.url_name == 'directory' %}bg-portal-primary/10 text-portal-primary{% else %}text-portal-muted hover:bg-portal-bg hover:text-portal-text{% endif %}">
                         <i data-lucide="users" class="w-4 h-4"></i>

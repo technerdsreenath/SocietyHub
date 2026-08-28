@@ -25,7 +25,7 @@
 
     <!-- Quick Actions Grid -->
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <a href="#" class="p-5 bg-portal-card border border-portal-border rounded-2xl shadow-card flex flex-col items-center justify-center text-center group hover:border-portal-primary hover:shadow-lg transition-all">
+        <a href="{% url 'initiate_payment' %}" class="p-5 bg-portal-card border border-portal-border rounded-2xl shadow-card flex flex-col items-center justify-center text-center group hover:border-portal-primary hover:shadow-lg transition-all">
             <div class="w-12 h-12 rounded-xl bg-portal-primary/10 text-portal-primary flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
                 <i data-lucide="credit-card" class="w-5 h-5"></i>
             </div>
@@ -62,28 +62,53 @@
                         <i data-lucide="receipt" class="w-4 h-4 text-portal-primary"></i>
                         Recent Bills & Dues
                     </h3>
-                    <a href="#" class="text-[11px] font-bold text-portal-primary hover:underline">View History</a>
+                    <a href="{% url 'billing_home' %}" class="text-[11px] font-bold text-portal-primary hover:underline">View History</a>
                 </div>
                 <div class="divide-y divide-portal-border">
                     {% for bill in bills %}
                     <div class="p-5 flex justify-between items-center transition-colors hover:bg-portal-bg/40">
                         <div class="space-y-1">
-                            <h4 class="font-bold text-xs text-portal-text">{{ bill.type }}</h4>
+                            <h4 class="font-bold text-xs text-portal-text">{{ bill.get_payment_type_display }}</h4>
+                            {% if bill.remarks %}
+                                <p class="text-[11px] text-portal-muted">{{ bill.remarks }}</p>
+                            {% endif %}
                             <div class="flex items-center gap-2 text-[10px] text-portal-muted">
-                                <span>Bill ID: {{ bill.id }}</span>
+                                <span>{% if bill.receipt_number %}Receipt: {{ bill.receipt_number }}{% else %}Invoice #{{ bill.id }}{% endif %}</span>
                                 <span>•</span>
-                                <span>Due: {{ bill.due_date }}</span>
+                                <span>{{ bill.created_at|date:"M d, Y" }}</span>
                             </div>
                         </div>
-                        <div class="flex items-center gap-4">
-                            <span class="font-bold text-xs text-portal-text">{{ bill.amount }}</span>
-                            <span class="px-2.5 py-1 rounded-full text-[10px] font-semibold {{ bill.status_color }}">
-                                {{ bill.status }}
-                            </span>
+                        <div class="flex items-center gap-2">
+                            <span class="font-bold text-xs text-portal-text">₹{{ bill.amount|floatformat:2 }}</span>
+                            <a href="{% url 'view_bill' bill.id %}" target="_blank" title="View Official CHS Bill" class="p-1.5 bg-portal-bg hover:bg-portal-primary/10 text-portal-primary rounded-lg text-[10px] font-bold inline-flex items-center gap-1 transition-colors">
+                                <i data-lucide="file-text" class="w-3.5 h-3.5"></i>
+                                Bill
+                            </a>
+                            {% if bill.status == 'success' %}
+                                <a href="{% url 'download_receipt_pdf' bill.id %}" title="Download Official PDF Receipt" class="p-1.5 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded-lg text-[10px] font-bold inline-flex items-center gap-1 transition-colors">
+                                    <i data-lucide="download" class="w-3.5 h-3.5"></i>
+                                    Receipt
+                                </a>
+                            {% elif bill.status == 'pending' %}
+                                <a href="{% url 'pay_bill' bill.id %}" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[11px] font-bold shadow-sm transition-all inline-flex items-center gap-1.5">
+                                    <i data-lucide="shield-check" class="w-3.5 h-3.5"></i>
+                                    Pay Now
+                                </a>
+                            {% else %}
+                                <span class="px-2.5 py-1 rounded-full text-[10px] font-semibold bg-rose-50 text-rose-700">
+                                    {{ bill.status|title }}
+                                </span>
+                            {% endif %}
                         </div>
                     </div>
                     {% empty %}
-                    <p class="p-6 text-center text-xs text-portal-muted font-medium">No bills found.</p>
+                    <div class="p-6 text-center text-xs text-portal-muted font-medium space-y-2">
+                        <p>No recent payment transactions found.</p>
+                        <a href="{% url 'initiate_payment' %}" class="inline-flex items-center gap-1.5 text-portal-primary font-bold hover:underline text-[11px]">
+                            <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i>
+                            Pay maintenance / society dues now
+                        </a>
+                    </div>
                     {% endfor %}
                 </div>
             </div>

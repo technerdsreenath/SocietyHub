@@ -33,9 +33,12 @@ def portal_dashboard(request):
         from SocietyHub.bookings.models import AmenityBooking
         user_bookings = AmenityBooking.objects.filter(user=request.user).order_by('-booking_date', '-start_time')[:5]
         
-        # Add empty data lists for resident dashboard (no backend models for bills yet)
+        # Fetch real payment transactions for this resident
+        from SocietyHub.billing.models import PaymentTransaction
+        user_payments = PaymentTransaction.objects.filter(user=request.user, society=profile.society).order_by('-created_at')[:5]
+        
         context.update({
-            'bills': [],
+            'bills': user_payments,
             'notices': society_notices,
             'bookings': user_bookings,
             'complaints': user_complaints
@@ -63,6 +66,12 @@ def portal_dashboard(request):
             amenity__society=profile.society
         ).select_related('amenity', 'user', 'user__profile').order_by('-booking_date', '-start_time')
 
+        # Fetch billing metrics for society
+        from SocietyHub.billing.models import PaymentTransaction
+        society_txns = PaymentTransaction.objects.filter(society=profile.society)
+        total_collected = sum(t.amount for t in society_txns.filter(status='success'))
+        pending_bills_count = society_txns.filter(status='pending').count()
+
         context.update({
             'pending_count': pending_profiles.count(),
             'pending_approvals_count': pending_profiles.count(),
@@ -72,10 +81,12 @@ def portal_dashboard(request):
             'active_notices_count': society_notices.count(),
             'notices': society_notices[:2],  # Shows recent notices dynamically on the dashboard
             'bookings': society_bookings,
+            'total_collected': total_collected,
+            'pending_bills_count': pending_bills_count,
         })
         return render(request, 'secretary/dashboard.html', context)
     
-# Fetch real notices from the database for this society once
+    # Fetch real notices from the database for this society once
     society_notices = Notice.objects.filter(society=profile.society).order_by('-created_at')
 
     if role == 'chairperson':
@@ -93,16 +104,26 @@ def portal_dashboard(request):
             amenity__society=profile.society
         ).select_related('amenity', 'user', 'user__profile').order_by('-booking_date', '-start_time')
 
+        # Real billing metrics for chairperson
+        from SocietyHub.billing.models import PaymentTransaction
+        chair_txns = PaymentTransaction.objects.filter(society=profile.society)
+        chair_total_collected = sum(t.amount for t in chair_txns.filter(status='success'))
+        total_bills_count = chair_txns.count()
+        success_count = chair_txns.filter(status='success').count()
+        collection_rate = f"{(success_count / total_bills_count * 100):.0f}%" if total_bills_count > 0 else "0%"
+
+        recent_transactions = chair_txns.select_related('user', 'user__profile').order_by('-created_at')[:8]
+
         context.update({
             'stats': {
                 'total_residents': total_residents,
                 'total_staff': total_staff,
-                'maintenance_collection_rate': '0%',
-                'monthly_revenue': '₹0',
+                'maintenance_collection_rate': collection_rate,
+                'monthly_revenue': f"₹{chair_total_collected:,.2f}",
                 'monthly_expense': '₹0',
-                'reserve_fund': '₹0'
+                'reserve_fund': f"₹{chair_total_collected:,.2f}"
             },
-            'recent_transactions': [],
+            'recent_transactions': recent_transactions,
             'reports': [],
             'notices': society_notices,
             'active_notices_count': society_notices.count(),

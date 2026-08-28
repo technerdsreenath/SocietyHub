@@ -48,35 +48,74 @@
                         <i data-lucide="arrow-up-right" class="w-4 h-4 text-portal-primary"></i>
                         Recent Collection Transactions
                     </h3>
-                    <a href="#" class="text-[11px] font-bold text-portal-primary hover:underline">View General Ledger</a>
+                    <a href="{% url 'billing_home' %}" class="text-[11px] font-bold text-portal-primary hover:underline">View General Ledger / All Bills</a>
                 </div>
                 <div class="overflow-x-auto">
                     <table class="w-full text-left text-xs border-collapse">
                         <thead>
                             <tr class="bg-portal-bg/60 text-portal-muted font-bold border-b border-portal-border">
-                                <th class="p-4">Resident</th>
-                                <th class="p-4">Payment Type</th>
-                                <th class="p-4 text-right">Amount</th>
+                                <th class="p-4">Resident / Flat</th>
+                                <th class="p-4">Payment Head & Period</th>
+                                <th class="p-4 text-right">Amount (₹)</th>
                                 <th class="p-4">Date</th>
                                 <th class="p-4 text-center">Status</th>
+                                <th class="p-4 text-right">Actions</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-portal-border">
                             {% for tx in recent_transactions %}
                             <tr class="hover:bg-portal-bg/10 transition-colors">
-                                <td class="p-4 font-bold text-portal-text">{{ tx.member }}</td>
-                                <td class="p-4 text-portal-muted font-semibold">{{ tx.type }}</td>
-                                <td class="p-4 text-right font-bold text-portal-text">{{ tx.amount }}</td>
-                                <td class="p-4 text-portal-muted font-medium">{{ tx.date }}</td>
+                                <td class="p-4">
+                                    <div class="font-bold text-portal-text">{{ tx.user.get_full_name|default:tx.user.username }}</div>
+                                    <div class="text-[10px] text-portal-muted mt-0.5">
+                                        {% if tx.user.profile.wing %}Wing {{ tx.user.profile.wing }}-{{ tx.user.profile.flat_number }}{% elif tx.user.profile.flat_number %}Flat {{ tx.user.profile.flat_number }}{% else %}Unit N/A{% endif %}
+                                        {% if tx.user.profile.area_sqft %} • {{ tx.user.profile.area_sqft|floatformat:0 }} sqft{% endif %}
+                                    </div>
+                                </td>
+                                <td class="p-4">
+                                    <span class="font-semibold text-portal-text block">{{ tx.get_payment_type_display }}</span>
+                                    <span class="text-[10px] text-portal-muted block">{{ tx.billing_period|default:"Regular Assessment" }}</span>
+                                </td>
+                                <td class="p-4 text-right font-bold text-portal-text font-mono">
+                                    ₹{{ tx.amount|floatformat:2 }}
+                                </td>
+                                <td class="p-4 text-portal-muted font-medium whitespace-nowrap">
+                                    {{ tx.created_at|date:"M d, Y" }}
+                                    <span class="text-[10px] block text-portal-muted/80">{{ tx.created_at|time:"h:i A" }}</span>
+                                </td>
                                 <td class="p-4 text-center">
-                                    <span class="px-2 py-0.5 bg-green-50 text-green-700 rounded text-[9px] font-extrabold uppercase tracking-wide">
-                                        {{ tx.status }}
-                                    </span>
+                                    {% if tx.status == 'success' %}
+                                        <span class="px-2.5 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full text-[9.5px] font-extrabold uppercase tracking-wide inline-flex items-center gap-1">
+                                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                            Paid
+                                        </span>
+                                    {% elif tx.status == 'pending' %}
+                                        <span class="px-2.5 py-1 bg-amber-50 text-amber-700 border border-amber-200 rounded-full text-[9.5px] font-extrabold uppercase tracking-wide inline-flex items-center gap-1">
+                                            <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                                            Pending
+                                        </span>
+                                    {% else %}
+                                        <span class="px-2.5 py-1 bg-rose-50 text-rose-700 border border-rose-200 rounded-full text-[9.5px] font-extrabold uppercase tracking-wide">
+                                            {{ tx.status|upper }}
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td class="p-4 text-right">
+                                    <div class="inline-flex items-center gap-1.5 justify-end">
+                                        <a href="{% url 'view_bill' tx.id %}" target="_blank" title="View Official CHS Bill" class="p-1.5 text-portal-muted hover:text-portal-primary hover:bg-portal-bg rounded-lg transition-colors">
+                                            <i data-lucide="file-text" class="w-4 h-4"></i>
+                                        </a>
+                                        {% if tx.status == 'success' %}
+                                        <a href="{% url 'view_receipt' tx.id %}" target="_blank" title="View Payment Receipt" class="p-1.5 text-portal-muted hover:text-portal-primary hover:bg-portal-bg rounded-lg transition-colors">
+                                            <i data-lucide="receipt" class="w-4 h-4"></i>
+                                        </a>
+                                        {% endif %}
+                                    </div>
                                 </td>
                             </tr>
                             {% empty %}
                             <tr>
-                                <td colspan="5" class="p-6 text-center text-portal-muted font-medium">No transactions recorded.</td>
+                                <td colspan="6" class="p-6 text-center text-portal-muted font-medium">No collection transactions recorded.</td>
                             </tr>
                             {% endfor %}
                         </tbody>

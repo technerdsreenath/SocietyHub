@@ -19,13 +19,13 @@ def amenity_list_view(request):
     society = profile.society
     
     # Automatically pre-populate default amenities if none exist in the database for this society.
-    # This simplifies direct testing for developers and users.
+    # Amenities in a cooperative society are complimentary community assets funded via maintenance.
     if society and not Amenity.objects.filter(society=society).exists():
         default_amenities = [
             {
                 'name': 'Clubhouse',
                 'description': 'Spacious clubhouse for community gatherings, small events, and indoor recreation.',
-                'booking_fee': 500.00,
+                'booking_fee': 0.00,
                 'open_time': datetime.time(9, 0),
                 'close_time': datetime.time(22, 0),
             },
@@ -39,7 +39,7 @@ def amenity_list_view(request):
             {
                 'name': 'Tennis Court',
                 'description': 'Outdoor concrete tennis court with professional netting and floodlights.',
-                'booking_fee': 100.00,
+                'booking_fee': 0.00,
                 'open_time': datetime.time(7, 0),
                 'close_time': datetime.time(20, 0),
             },
@@ -53,7 +53,7 @@ def amenity_list_view(request):
             {
                 'name': 'Guest Room',
                 'description': 'Furnished air-conditioned guest suites for hosting visitors overnight.',
-                'booking_fee': 1000.00,
+                'booking_fee': 0.00,
                 'open_time': datetime.time(8, 0),
                 'close_time': datetime.time(22, 0),
             }
@@ -68,6 +68,10 @@ def amenity_list_view(request):
                 close_time=item['close_time'],
                 is_active=True
             )
+
+    # Ensure all amenities for this society have booking_fee set to 0.00 as amenities are complimentary
+    if society:
+        Amenity.objects.filter(society=society, booking_fee__gt=0).update(booking_fee=0.00)
 
     from django.db.models import Prefetch
     today = datetime.date.today()

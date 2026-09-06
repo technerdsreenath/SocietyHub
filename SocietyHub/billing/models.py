@@ -1,5 +1,6 @@
 import datetime
 import random
+from decimal import Decimal
 from django.db import models
 from django.contrib.auth.models import User
 from SocietyHub.users.models import Society
@@ -101,3 +102,109 @@ class PaymentTransaction(models.Model):
             new_seq += 1
             candidate = f"{prefix}-{new_seq:04d}"
         return candidate
+
+
+class MaintenanceScheduleConfig(models.Model):
+    """
+    Automated Maintenance Billing Schedule configuration for each society.
+    Allows the system to automatically generate and dispatch itemized bills
+    to all approved residents on the designated recurring calendar date.
+    """
+    FREQUENCY_CHOICES = [
+        ('monthly', 'Monthly (Every Month)'),
+        ('quarterly', 'Quarterly (Every 3 Months)'),
+    ]
+
+    society = models.OneToOneField(Society, on_delete=models.CASCADE, related_name='maintenance_schedule')
+    is_auto_dispatch_active = models.BooleanField(
+        default=True, 
+        help_text="When enabled, bills are automatically generated and dispatched on the scheduled date"
+    )
+    dispatch_day = models.PositiveSmallIntegerField(
+        default=1, 
+        help_text="Day of the month to dispatch bills automatically (1 to 28)"
+    )
+    frequency = models.CharField(
+        max_length=20, 
+        choices=FREQUENCY_CHOICES, 
+        default='monthly'
+    )
+    due_days = models.PositiveSmallIntegerField(
+        default=15, 
+        help_text="Days from bill dispatch until due date (e.g., 15 days)"
+    )
+
+    # Saved Statutory Head Rates (Defaulted to Maharashtra CHS Model Bye-Law #67 standards)
+    prop_tax_rate = models.DecimalField(max_digits=8, decimal_places=3, default=Decimal('5.026'))
+    prop_tax_fixed = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
+
+    sinking_rate = models.DecimalField(max_digits=8, decimal_places=3, default=Decimal('1.569'))
+    sinking_fixed = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
+
+    repair_rate = models.DecimalField(max_digits=8, decimal_places=3, default=Decimal('3.147'))
+    repair_fixed = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
+
+    service_rate = models.DecimalField(max_digits=8, decimal_places=3, default=Decimal('0.00'))
+    service_fixed = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('3600.00'))
+
+    electricity_fixed = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('1350.00'))
+    water_fixed = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('450.00'))
+    security_fixed = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('2100.00'))
+    parking_fixed = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
+    non_occupancy_fixed = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
+
+    last_dispatched_date = models.DateField(null=True, blank=True)
+    last_dispatched_period = models.CharField(max_length=100, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Schedule for {self.society.name} (Day {self.dispatch_day}, {self.frequency})"
+
+    def get_current_period_label(self, ref_date=None):
+        import datetime
+        d = ref_date or datetime.date.today()
+        month_names = ["", "January", "February", "March", "April", "May", "June",
+                       "July", "August", "September", "October", "November", "December"]
+        if self.frequency == 'monthly':
+            return f"{month_names[d.month]} {d.year}"
+        elif self.frequency == 'quarterly':
+            q_idx = (d.month - 1) // 3
+            quarters = [
+                f"Q1 (Jan/Feb/Mar) {d.year}",
+                f"Q2 (Apr/May/Jun) {d.year}",
+                f"Q3 (Jul/Aug/Sep) {d.year}",
+                f"Q4 (Oct/Nov/Dec) {d.year}"
+            ]
+            return quarters[q_idx]
+        return f"{month_names[d.month]} {d.year}"
+
+    def get_next_dispatch_date(self, ref_date=None):
+        import datetime
+        today = ref_date or datetime.date.today()
+        day = min(max(self.dispatch_day, 1), 28)
+        try:
+            target_this_month = datetime.date(today.year, today.month, day)
+        except ValueError:
+            target_this_month = datetime.date(today.year, today.month, 28)
+
+        if target_this_month > today:
+            return target_this_month
+        
+        # Next cycle
+        if self.frequency == 'quarterly':
+            current_q = (today.month - 1) // 3
+            next_q_month = ((current_q + 1) * 3) + 1
+            next_year = today.year
+            if next_q_month > 12:
+                next_q_month = 1
+                next_year += 1
+            return datetime.date(next_year, next_q_month, day)
+        else:
+            next_month = today.month + 1
+            next_year = today.year
+            if next_month > 12:
+                next_month = 1
+                next_year += 1
+            return datetime.date(next_year, next_month, day)
+

@@ -52,19 +52,9 @@
                         {% endif %}
                     </div>
                     <div class="flex items-center gap-1.5">
-                        <span class="px-2.5 py-1 rounded-full text-[10px] font-extrabold tracking-wider uppercase {% if amenity.booking_fee > 0 %}bg-amber-50 text-amber-700 border border-amber-100{% else %}bg-green-50 text-green-700 border border-green-100{% endif %}">
-                            {% if amenity.booking_fee > 0 %}₹{{ amenity.booking_fee }}{% else %}Free{% endif %}
+                        <span class="px-2.5 py-1 rounded-full text-[10px] font-extrabold tracking-wider uppercase bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1 shadow-xs">
+                            <i data-lucide="sparkles" class="w-3 h-3 text-emerald-600"></i> Complimentary
                         </span>
-                        {% if role == 'chairperson' %}
-                        <button type="button" 
-                                class="p-1 text-portal-muted hover:text-portal-primary hover:bg-portal-bg border border-portal-border rounded-lg transition-colors edit-price-btn" 
-                                data-id="{{ amenity.id }}" 
-                                data-name="{{ amenity.name }}" 
-                                data-fee="{{ amenity.booking_fee }}"
-                                title="Edit Pricing">
-                            <i data-lucide="pencil" class="w-3 h-3"></i>
-                        </button>
-                        {% endif %}
                     </div>
                 </div>
 
@@ -83,8 +73,8 @@
                         <span>Timings: <strong class="text-portal-text">{{ amenity.open_time|time:"g:i A" }} - {{ amenity.close_time|time:"g:i A" }}</strong></span>
                     </div>
                     <div class="flex items-center gap-2">
-                        <i data-lucide="info" class="w-3.5 h-3.5 text-portal-primary"></i>
-                        <span>Booking Fee: <strong class="text-portal-text">{% if amenity.booking_fee > 0 %}₹{{ amenity.booking_fee }} per slot{% else %}Free / Complimentary{% endif %}</strong></span>
+                        <i data-lucide="check-circle" class="w-3.5 h-3.5 text-emerald-600"></i>
+                        <span>Facility Rate: <strong class="text-emerald-700 font-bold">100% Free / Included in Maintenance</strong></span>
                     </div>
                     
                     <!-- Booked Slots List -->
@@ -112,14 +102,14 @@
 
             <!-- Action Button -->
             <button type="button" 
-                    class="w-full bg-[#F8F9FA] hover:bg-portal-primary hover:text-white border border-portal-border text-portal-text font-bold py-2.5 rounded-xl text-xs transition-all mt-6 flex items-center justify-center gap-2 book-btn"
+                    class="w-full bg-[#F8F9FA] hover:bg-portal-primary hover:text-white border border-portal-border text-portal-text font-bold py-2.5 rounded-xl text-xs transition-all mt-6 flex items-center justify-center gap-2 book-btn shadow-xs"
                     data-id="{{ amenity.id }}"
                     data-name="{{ amenity.name }}"
                     data-open="{{ amenity.open_time|time:'H:i' }}"
                     data-close="{{ amenity.close_time|time:'H:i' }}"
-                    data-fee="{% if amenity.booking_fee > 0 %}₹{{ amenity.booking_fee }}{% else %}Free{% endif %}">
+                    data-fee="Complimentary (₹0.00)">
                 <i data-lucide="calendar-plus" class="w-3.5 h-3.5"></i>
-                Book Slot
+                Reserve Slot
             </button>
         </div>
         {% empty %}
@@ -154,15 +144,23 @@
             {% csrf_token %}
             
             <!-- Dynamic Details Panel -->
-            <div class="bg-[#F8F9FA] border border-portal-border rounded-xl p-4 space-y-2 text-[10px] font-semibold text-portal-muted">
-                <div class="flex justify-between">
+            <div class="bg-emerald-50/50 border border-emerald-200/80 rounded-xl p-4 space-y-2 text-[10px] font-semibold">
+                <div class="flex justify-between text-portal-muted">
                     <span>Operating Hours:</span>
                     <span id="modal-timings" class="text-portal-text font-bold"></span>
                 </div>
-                <div class="flex justify-between">
-                    <span>Charge / Fee:</span>
-                    <span id="modal-fee" class="text-portal-text font-bold"></span>
+                <div class="flex justify-between text-emerald-800 font-bold border-t border-emerald-100 pt-1.5">
+                    <span class="flex items-center gap-1.5">
+                        <i data-lucide="shield-check" class="w-3.5 h-3.5 text-emerald-600"></i>
+                        Facility Charge:
+                    </span>
+                    <span class="px-2 py-0.5 rounded-md bg-emerald-100/70 text-emerald-800 font-bold">
+                        100% Free (Complimentary)
+                    </span>
                 </div>
+                <p class="text-[9.5px] text-emerald-700/90 font-medium italic pt-1 border-t border-emerald-100">
+                    * All society amenities are included in your regular maintenance dues. Slot reservations are strictly for schedule management and conflict prevention.
+                </p>
             </div>
 
             <!-- Date -->
@@ -190,57 +188,12 @@
                 </button>
                 <button type="submit" class="flex-1 bg-portal-primary hover:bg-portal-primary/95 text-white font-bold py-3 rounded-xl text-xs shadow-flat transition-all flex items-center justify-center gap-1.5">
                     <i data-lucide="check" class="w-3.5 h-3.5"></i>
-                    Confirm Booking
+                    Confirm Slot Reservation
                 </button>
             </div>
         </form>
     </div>
 </div>
-
-{% if role == 'chairperson' %}
-<!-- Edit Pricing Modal -->
-<div id="price-modal" class="fixed inset-0 bg-[#2F3E46]/40 backdrop-blur-sm z-50 flex items-center justify-center hidden opacity-0 transition-opacity duration-300">
-    <div class="bg-white rounded-2xl border border-portal-border shadow-2xl max-w-sm w-full mx-4 overflow-hidden transform scale-95 transition-transform duration-300">
-        <!-- Header -->
-        <div class="p-6 border-b border-portal-border flex justify-between items-center bg-[#FCFDFD]">
-            <div>
-                <h3 id="price-modal-title" class="font-bold text-sm text-portal-text flex items-center gap-2">
-                    <i data-lucide="pencil-line" class="text-portal-primary w-4.5 h-4.5"></i>
-                    Edit Amenity Price
-                </h3>
-                <p class="text-[10px] text-portal-muted font-medium mt-0.5">Modify the reservation fee for this facility.</p>
-            </div>
-            <button id="close-price-modal" class="text-portal-muted hover:text-portal-text p-1.5 hover:bg-portal-bg rounded-lg transition-colors">
-                <i data-lucide="x" class="w-4 h-4"></i>
-            </button>
-        </div>
-
-        <!-- Form -->
-        <form id="price-form" method="POST" action="" class="p-6 space-y-4">
-            {% csrf_token %}
-            
-            <!-- Booking Fee -->
-            <div>
-                <label class="block text-[10px] font-bold uppercase text-portal-muted mb-1.5">Booking Fee (₹)</label>
-                <input type="number" step="0.01" min="0" name="booking_fee" id="price-input" 
-                       class="w-full bg-[#F8F9FA] border border-portal-border rounded-xl px-3.5 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-portal-primary font-medium text-portal-text" required>
-                <p class="text-[9px] text-portal-muted mt-1.5 font-semibold">Set to 0 to make the amenity free of charge.</p>
-            </div>
-
-            <!-- Actions -->
-            <div class="flex gap-3 pt-4 border-t border-portal-border mt-6">
-                <button type="button" id="cancel-price-modal" class="flex-1 bg-white hover:bg-portal-bg border border-portal-border text-portal-text font-bold py-3 rounded-xl text-xs transition-all">
-                    Cancel
-                </button>
-                <button type="submit" class="flex-1 bg-portal-primary hover:bg-portal-primary/95 text-white font-bold py-3 rounded-xl text-xs shadow-flat transition-all flex items-center justify-center gap-1.5">
-                    <i data-lucide="save" class="w-3.5 h-3.5"></i>
-                    Save Changes
-                </button>
-            </div>
-        </form>
-    </div>
-</div>
-{% endif %}
 {% endblock %}
 
 {% block extra_js %}
@@ -251,7 +204,6 @@
         const form = document.getElementById('booking-form');
         const modalTitle = document.getElementById('modal-title');
         const modalTimings = document.getElementById('modal-timings');
-        const modalFee = document.getElementById('modal-fee');
         const closeBtn = document.getElementById('close-modal');
         const cancelBtn = document.getElementById('cancel-modal');
         
@@ -262,15 +214,13 @@
                 const name = this.getAttribute('data-name');
                 const open = this.getAttribute('data-open');
                 const close = this.getAttribute('data-close');
-                const fee = this.getAttribute('data-fee');
 
                 // Update Form Action
                 form.action = `/bookings/book/${id}/`;
 
                 // Update Info in Modal
-                modalTitle.innerHTML = `<i data-lucide="calendar-range" class="text-portal-primary w-4.5 h-4.5"></i> Book ${name}`;
+                modalTitle.innerHTML = `<i data-lucide="calendar-range" class="text-portal-primary w-4.5 h-4.5"></i> Reserve ${name}`;
                 modalTimings.innerText = `${open} to ${close}`;
-                modalFee.innerText = fee;
                 
                 // Refresh Lucide Icons in Modal Title
                 lucide.createIcons();
@@ -294,8 +244,8 @@
             }, 300);
         }
 
-        closeBtn.addEventListener('click', closeModal);
-        cancelBtn.addEventListener('click', closeModal);
+        if (closeBtn) closeBtn.addEventListener('click', closeModal);
+        if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
 
         // Close when clicking backdrop
         modal.addEventListener('click', function (e) {
@@ -303,56 +253,6 @@
                 closeModal();
             }
         });
-
-        // Price Modal Logic (Executes only for Chairperson)
-        const priceModal = document.getElementById('price-modal');
-        if (priceModal) {
-            const priceModalContent = priceModal.querySelector('.transform');
-            const priceForm = document.getElementById('price-form');
-            const priceModalTitle = document.getElementById('price-modal-title');
-            const priceInput = document.getElementById('price-input');
-            const closePriceBtn = document.getElementById('close-price-modal');
-            const cancelPriceBtn = document.getElementById('cancel-price-modal');
-
-            document.querySelectorAll('.edit-price-btn').forEach(button => {
-                button.addEventListener('click', function (e) {
-                    e.stopPropagation();
-                    const id = this.getAttribute('data-id');
-                    const name = this.getAttribute('data-name');
-                    const fee = this.getAttribute('data-fee');
-
-                    priceForm.action = `/bookings/edit-price/${id}/`;
-                    priceModalTitle.innerHTML = `<i data-lucide="pencil-line" class="text-portal-primary w-4.5 h-4.5"></i> Edit ${name} Price`;
-                    priceInput.value = fee;
-
-                    lucide.createIcons();
-
-                    priceModal.classList.remove('hidden');
-                    setTimeout(() => {
-                        priceModal.classList.remove('opacity-0');
-                        priceModalContent.classList.remove('scale-95');
-                        priceModalContent.classList.remove('opacity-0');
-                    }, 10);
-                });
-            });
-
-            function closePriceModal() {
-                priceModal.classList.add('opacity-0');
-                priceModalContent.classList.add('scale-95');
-                setTimeout(() => {
-                    priceModal.classList.add('hidden');
-                }, 300);
-            }
-
-            if (closePriceBtn) closePriceBtn.addEventListener('click', closePriceModal);
-            if (cancelPriceBtn) cancelPriceBtn.addEventListener('click', closePriceModal);
-
-            priceModal.addEventListener('click', function (e) {
-                if (e.target === priceModal) {
-                    closePriceModal();
-                }
-            });
-        }
     });
 </script>
 {% endblock %}

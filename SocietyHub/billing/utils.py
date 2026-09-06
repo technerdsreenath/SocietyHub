@@ -570,3 +570,205 @@ def generate_receipt_pdf(transaction):
     doc.build(story, onFirstPage=watermark_cb, onLaterPages=watermark_cb)
     buffer.seek(0)
     return buffer
+
+
+def get_or_create_schedule_config(society):
+    """
+    Returns the MaintenanceScheduleConfig for a society, creating default if not existing.
+    """
+    from .models import MaintenanceScheduleConfig
+    config, _ = MaintenanceScheduleConfig.objects.get_or_create(society=society)
+    return config
+
+
+def execute_auto_dispatch_for_society(society, ref_date=None, force=False):
+    """
+    Automatically generates and dispatches itemized CHS maintenance bills
+    to all approved residents/flats for the designated period on the scheduled date.
+    
+    Returns a dict with execution results:
+    {
+        'dispatched': bool,
+        'period': str,
+        'created_count': int,
+        'total_amount': Decimal,
+        'reason': str
+    }
+    """
+    import datetime
+    import json
+    from decimal import Decimal
+    from SocietyHub.users.models import UserProfile
+    from .models import PaymentTransaction, MaintenanceScheduleConfig
+
+    today = ref_date or datetime.date.today()
+    config = get_or_create_schedule_config(society)
+
+    if not config.is_auto_dispatch_active and not force:
+        return {
+            'dispatched': False,
+            'reason': f"Auto-dispatch is disabled for society '{society.name}'."
+        }
+
+    period_label = config.get_current_period_label(today)
+
+    # Check if today is on or after the scheduled dispatch day
+    # (Unless force=True for testing/viva demonstration)
+    if not force:
+        if today.day < config.dispatch_day:
+            return {
+                'dispatched': False,
+                'period': period_label,
+                'reason': f"Today (day {today.day}) is prior to scheduled dispatch day ({config.dispatch_day})."
+            }
+
+    # Duplicate check: check if bills for this period have already been dispatched for this society
+    existing_bills = PaymentTransaction.objects.filter(
+        society=society,
+        payment_type='maintenance',
+        billing_period=period_label
+    )
+    if existing_bills.exists() and not force:
+        return {
+            'dispatched': False,
+            'period': period_label,
+            'created_count': 0,
+            'reason': f"Maintenance bills for '{period_label}' have already been dispatched."
+        }
+
+    # Fetch eligible residents
+    eligible_profiles = UserProfile.objects.filter(
+        society=society,
+        is_approved=True,
+        role__in=['resident', 'secretary', 'chairperson']
+    ).select_related('user').order_by('wing', 'flat_number', 'user__first_name')
+
+    if not eligible_profiles.exists():
+        return {
+            'dispatched': False,
+            'period': period_label,
+            'created_count': 0,
+            'reason': f"No approved residents found in society '{society.name}'."
+        }
+
+    # Bill Date and Due Date
+    bill_date = today
+    due_date = today + datetime.timedelta(days=int(config.due_days or 15))
+
+    # Sequential Bill Numbering
+    last_bill_seq = 28
+    try:
+        last_b = PaymentTransaction.objects.exclude(bill_number__isnull=True).exclude(bill_number='').order_by('-id').first()
+        if last_b and last_b.bill_number:
+            last_bill_seq = int(''.join(filter(str.isdigit, str(last_b.bill_number))))
+    except Exception:
+        last_bill_seq = 28
+
+    created_count = 0
+    total_amount = Decimal('0')
+
+    for user_prof in eligible_profiles:
+        # Check if bill for this specific resident in this period already exists
+        if not force and PaymentTransaction.objects.filter(user=user_prof.user, society=society, payment_type='maintenance', billing_period=period_label).exists():
+            continue
+
+        sqft = user_prof.area_sqft or Decimal('850')
+
+        # Convert all config fields safely to Decimal
+        prop_tax_rate = Decimal(str(config.prop_tax_rate or '0'))
+        prop_tax_fixed = Decimal(str(config.prop_tax_fixed or '0'))
+        sinking_rate = Decimal(str(config.sinking_rate or '0'))
+        sinking_fixed = Decimal(str(config.sinking_fixed or '0'))
+        repair_rate = Decimal(str(config.repair_rate or '0'))
+        repair_fixed = Decimal(str(config.repair_fixed or '0'))
+        service_rate = Decimal(str(config.service_rate or '0'))
+        service_fixed = Decimal(str(config.service_fixed or '0'))
+        electricity_fixed = Decimal(str(config.electricity_fixed or '0'))
+        water_fixed = Decimal(str(config.water_fixed or '0'))
+        security_fixed = Decimal(str(config.security_fixed or '0'))
+        parking_fixed = Decimal(str(config.parking_fixed or '0'))
+        non_occupancy_fixed = Decimal(str(config.non_occupancy_fixed or '0'))
+
+        # Area based calculations
+        prop_tax_amt = (sqft * prop_tax_rate) + prop_tax_fixed if (prop_tax_rate or prop_tax_fixed) else Decimal('0')
+        sinking_amt = (sqft * sinking_rate) + sinking_fixed if (sinking_rate or sinking_fixed) else Decimal('0')
+        repair_amt = (sqft * repair_rate) + repair_fixed if (repair_rate or repair_fixed) else Decimal('0')
+        service_amt = (sqft * service_rate) + service_fixed if (service_rate or service_fixed) else Decimal('0')
+
+        particulars_list = []
+        if prop_tax_amt > 0:
+            particulars_list.append({"particular": "PROPERTY TAXES", "amount": float(prop_tax_amt)})
+        if sinking_amt > 0:
+            particulars_list.append({"particular": "SINKING FUND", "amount": float(sinking_amt)})
+        if repair_amt > 0:
+            particulars_list.append({"particular": "REPAIR FUND", "amount": float(repair_amt)})
+        if electricity_fixed > 0:
+            particulars_list.append({"particular": "ELECTRICITY CHARGES", "amount": float(electricity_fixed)})
+        if water_fixed > 0:
+            particulars_list.append({"particular": "WATER CHARGES", "amount": float(water_fixed)})
+        if service_amt > 0:
+            particulars_list.append({"particular": "SERVICE CHARGES", "amount": float(service_amt)})
+        if security_fixed > 0:
+            particulars_list.append({"particular": "SECURITY CHARGES", "amount": float(security_fixed)})
+        if parking_fixed > 0:
+            particulars_list.append({"particular": "PARKING CHARGES", "amount": float(parking_fixed)})
+        if non_occupancy_fixed > 0:
+            particulars_list.append({"particular": "NON-OCCUPANCY CHARGES", "amount": float(non_occupancy_fixed)})
+
+        subtotal = sum(Decimal(str(item['amount'])) for item in particulars_list)
+        if subtotal <= Decimal('0'):
+            continue
+
+        # Look for existing unpaid arrears for this resident
+        prev_unpaid = PaymentTransaction.objects.filter(
+            user=user_prof.user,
+            society=society,
+            payment_type='maintenance',
+            status='pending'
+        ).exclude(billing_period=period_label)
+        arrears = sum(b.amount for b in prev_unpaid) if prev_unpaid.exists() else Decimal('0')
+        interest = (arrears * Decimal('0.21')) if arrears > 0 else Decimal('0')
+        grand_total = subtotal + arrears + interest
+
+        last_bill_seq += 1
+        bill_no_str = str(last_bill_seq)
+
+        desc_parts = [f"Maintenance Bill ({period_label}) - Auto Dispatched"]
+        if user_prof.flat_name:
+            desc_parts.append(f"Flat: {user_prof.flat_name}")
+        elif user_prof.wing or user_prof.flat_number:
+            desc_parts.append(f"Flat: {user_prof.wing or ''}-{user_prof.flat_number or ''}")
+        desc_parts.append(f"({sqft} sq.ft)")
+
+        PaymentTransaction.objects.create(
+            user=user_prof.user,
+            society=society,
+            payment_type='maintenance',
+            amount=grand_total,
+            subtotal_amount=subtotal,
+            arrears_amount=arrears,
+            interest_amount=interest,
+            bill_number=bill_no_str,
+            bill_date=bill_date,
+            due_date=due_date,
+            billing_period=period_label,
+            breakdown_json=json.dumps(particulars_list),
+            status='pending',
+            remarks=" | ".join(desc_parts)
+        )
+        created_count += 1
+        total_amount += grand_total
+
+    # Update config tracking
+    config.last_dispatched_date = today
+    config.last_dispatched_period = period_label
+    config.save()
+
+    return {
+        'dispatched': True,
+        'period': period_label,
+        'created_count': created_count,
+        'total_amount': total_amount,
+        'reason': f"Dispatched {created_count} bills totaling ₹{total_amount:,.2f} for {period_label}."
+    }
+

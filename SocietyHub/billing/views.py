@@ -12,7 +12,13 @@ from django.contrib import messages
 from django.conf import settings
 from django.views.decorators.csrf import csrf_exempt
 from .models import PaymentTransaction
-from .utils import generate_receipt_pdf, generate_bill_pdf, number_to_words_inr
+from .utils import (
+    generate_receipt_pdf, 
+    generate_bill_pdf, 
+    number_to_words_inr,
+    get_or_create_schedule_config,
+    execute_auto_dispatch_for_society
+)
 
 # Setup Razorpay client with fallback for development/demo
 RAZORPAY_KEY_ID = getattr(settings, 'RAZORPAY_KEY_ID', os.getenv('RAZORPAY_KEY_ID', 'rzp_test_societyhub_demo'))
@@ -34,6 +40,15 @@ def billing_home(request):
     profile = getattr(request.user, 'profile', None)
     if not profile or not profile.is_approved:
         return render(request, 'auth/pending_approval.html', {'profile': profile})
+
+    # Auto-dispatch evaluation: If scheduled date arrived, automatically dispatch pending bills
+    if profile.society and profile.role in ['secretary', 'chairperson']:
+        try:
+            auto_res = execute_auto_dispatch_for_society(profile.society, force=False)
+            if auto_res.get('dispatched'):
+                messages.info(request, f"Automatic Dispatch Executed: {auto_res['reason']}")
+        except Exception:
+            pass
 
     # If resident, show their transactions; if admin/secretary, show society-wide transactions
     if profile.role in ['secretary', 'chairperson']:
@@ -411,7 +426,60 @@ def set_maintenance_view(request):
         role__in=['resident', 'secretary', 'chairperson']
     ).select_related('user').order_by('wing', 'flat_number', 'user__first_name')
 
+    schedule_config = get_or_create_schedule_config(profile.society)
+
     if request.method == 'POST':
+        action = request.POST.get('action', 'generate_bills')
+
+        # 1. Action: Save Automatic Recurring Billing Schedule
+        if action == 'save_schedule':
+            try:
+                schedule_config.is_auto_dispatch_active = (request.POST.get('is_auto_dispatch_active') == 'on')
+                schedule_config.dispatch_day = max(1, min(28, int(request.POST.get('dispatch_day', 1))))
+                schedule_config.frequency = request.POST.get('frequency', 'monthly')
+                schedule_config.due_days = max(1, int(request.POST.get('due_days', 15)))
+
+                # Parse rates from POST
+                def parse_rate(k, def_v):
+                    try:
+                        v = request.POST.get(k, def_v).strip()
+                        return Decimal(v) if v else Decimal(def_v)
+                    except Exception:
+                        return Decimal(def_v)
+
+                schedule_config.prop_tax_rate = parse_rate('prop_tax_rate', '5.026')
+                schedule_config.prop_tax_fixed = parse_rate('prop_tax_fixed', '0.00')
+                schedule_config.sinking_rate = parse_rate('sinking_rate', '1.569')
+                schedule_config.sinking_fixed = parse_rate('sinking_fixed', '0.00')
+                schedule_config.repair_rate = parse_rate('repair_rate', '3.147')
+                schedule_config.repair_fixed = parse_rate('repair_fixed', '0.00')
+                schedule_config.service_fixed = parse_rate('service_fixed', '3600.00')
+                schedule_config.electricity_fixed = parse_rate('electricity_fixed', '1350.00')
+                schedule_config.water_fixed = parse_rate('water_fixed', '450.00')
+                schedule_config.security_fixed = parse_rate('security_fixed', '2100.00')
+                schedule_config.parking_fixed = parse_rate('parking_fixed', '0.00')
+                schedule_config.non_occupancy_fixed = parse_rate('non_occupancy_fixed', '0.00')
+                schedule_config.save()
+
+                next_d = schedule_config.get_next_dispatch_date()
+                messages.success(
+                    request, 
+                    f"Automatic maintenance billing schedule updated! Next automated dispatch: {next_d:%B %d, %Y} (Day {schedule_config.dispatch_day} of every cycle)."
+                )
+            except Exception as e:
+                messages.error(request, f"Failed to save schedule settings: {e}")
+            return redirect('set_maintenance')
+
+        # 2. Action: Immediate Trigger Scheduled Dispatch (Viva / Testing demonstration)
+        elif action == 'trigger_auto_dispatch':
+            res = execute_auto_dispatch_for_society(profile.society, force=True)
+            if res.get('dispatched'):
+                messages.success(request, f"Scheduled Auto-Dispatch Run Succeeded: {res['reason']}")
+            else:
+                messages.warning(request, f"Auto-Dispatch Status: {res.get('reason')}")
+            return redirect('billing_home')
+
+        # 3. Action: Manual Batch Bill Generation for Selected Residents
         billing_period = request.POST.get('billing_period', 'July/August/September 2026').strip()
         bill_date_val = request.POST.get('bill_date')
         due_date_val = request.POST.get('due_date')
@@ -589,6 +657,9 @@ def set_maintenance_view(request):
         'profile': profile,
         'eligible_profiles': eligible_profiles,
         'total_residents': eligible_profiles.count(),
+        'schedule_config': schedule_config,
+        'next_dispatch_date': schedule_config.get_next_dispatch_date(),
+        'current_period_label': schedule_config.get_current_period_label(),
     })
 
 

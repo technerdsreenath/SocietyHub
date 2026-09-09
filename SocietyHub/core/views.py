@@ -60,11 +60,14 @@ def portal_dashboard(request):
         from SocietyHub.complaints.models import Complaint
         active_complaints_count = Complaint.objects.filter(society=profile.society).exclude(status='Closed').count()
 
-        # Fetch all amenity bookings for the secretary's society
-        from SocietyHub.bookings.models import AmenityBooking
+        # Fetch all amenity bookings and amenities for the secretary's society
+        from SocietyHub.bookings.models import Amenity, AmenityBooking
+        from SocietyHub.bookings.forms import AmenityForm
         society_bookings = AmenityBooking.objects.filter(
             amenity__society=profile.society
         ).select_related('amenity', 'user', 'user__profile').order_by('-booking_date', '-start_time')
+        amenities = Amenity.objects.filter(society=profile.society, is_active=True).order_by('name')
+        amenity_form = AmenityForm()
 
         # Fetch billing metrics for society
         from SocietyHub.billing.models import PaymentTransaction
@@ -81,6 +84,8 @@ def portal_dashboard(request):
             'active_notices_count': society_notices.count(),
             'notices': society_notices[:2],  # Shows recent notices dynamically on the dashboard
             'bookings': society_bookings,
+            'amenities': amenities,
+            'amenity_form': amenity_form,
             'total_collected': total_collected,
             'pending_bills_count': pending_bills_count,
         })

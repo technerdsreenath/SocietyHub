@@ -216,6 +216,11 @@ def portal_dashboard(request):
         from SocietyHub.users.models import Notice
         society_notices = Notice.objects.filter(society=profile.society).order_by('-created_at')
 
+        from SocietyHub.bookings.models import Amenity
+        from SocietyHub.bookings.forms import AmenityForm
+        amenities = Amenity.objects.filter(society=profile.society, is_active=True).order_by('name')
+        amenity_form = AmenityForm()
+
         context.update({
             'pending_profiles': pending_profiles,
             'pending_count': pending_profiles.count(),
@@ -224,6 +229,8 @@ def portal_dashboard(request):
             'active_complaints_count': active_complaints_count,
             'active_notices_count': society_notices.count(),
             'notices': society_notices[:2],
+            'amenities': amenities,
+            'amenity_form': amenity_form,
         })
         
     return render(request, 'secretary/dashboard.html', context)

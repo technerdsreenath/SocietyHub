@@ -1,7 +1,63 @@
 from django import forms
 from django.utils import timezone
-from .models import AmenityBooking
+from .models import Amenity, AmenityBooking
 import datetime
+
+class AmenityForm(forms.ModelForm):
+    booking_fee = forms.DecimalField(
+        required=False,
+        initial=0.00,
+        widget=forms.NumberInput(attrs={
+            'class': 'w-full bg-[#F8F9FA] border border-portal-border rounded-xl px-3.5 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-portal-primary font-medium text-portal-text',
+            'step': '0.01',
+            'min': '0',
+            'placeholder': '0.00'
+        })
+    )
+
+    class Meta:
+        model = Amenity
+        fields = ['name', 'description', 'open_time', 'close_time', 'booking_fee']
+        widgets = {
+            'name': forms.TextInput(attrs={
+                'class': 'w-full bg-[#F8F9FA] border border-portal-border rounded-xl px-3.5 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-portal-primary font-medium text-portal-text',
+                'placeholder': 'e.g. Swimming Pool, Badminton Court, Community Hall',
+                'required': True
+            }),
+            'description': forms.Textarea(attrs={
+                'class': 'w-full bg-[#F8F9FA] border border-portal-border rounded-xl px-3.5 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-portal-primary font-medium text-portal-text',
+                'rows': 3,
+                'placeholder': 'Description, capacity, guidelines, or rules for this amenity...',
+                'required': True
+            }),
+            'open_time': forms.TimeInput(attrs={
+                'type': 'time',
+                'class': 'w-full bg-[#F8F9FA] border border-portal-border rounded-xl px-3.5 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-portal-primary font-medium text-portal-text',
+                'required': True
+            }),
+            'close_time': forms.TimeInput(attrs={
+                'type': 'time',
+                'class': 'w-full bg-[#F8F9FA] border border-portal-border rounded-xl px-3.5 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-portal-primary font-medium text-portal-text',
+                'required': True
+            }),
+        }
+
+    def clean_booking_fee(self):
+        fee = self.cleaned_data.get('booking_fee')
+        if fee is None or fee == '':
+            return 0.00
+        return fee
+
+    def clean(self):
+        cleaned_data = super().clean()
+        open_time = cleaned_data.get('open_time')
+        close_time = cleaned_data.get('close_time')
+
+        if open_time and close_time:
+            if open_time >= close_time:
+                raise forms.ValidationError("Closing time must be later than opening time.")
+        return cleaned_data
+
 
 class AmenityBookingForm(forms.ModelForm):
     class Meta:

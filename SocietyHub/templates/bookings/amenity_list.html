@@ -23,10 +23,18 @@
             <h2 class="text-sm font-bold text-portal-text">Available Amenities</h2>
             <p class="text-[11px] text-portal-muted mt-1 font-medium">Book facilities in {{ profile.society.name }} for your events or personal recreation.</p>
         </div>
-        <a href="{% url 'my_bookings' %}" class="px-4 py-2.5 bg-portal-primary hover:bg-portal-primary/95 text-white font-bold rounded-xl text-xs shadow-flat transition-all flex items-center gap-2">
-            <i data-lucide="calendar" class="w-3.5 h-3.5"></i>
-            My Bookings
-        </a>
+        <div class="flex items-center gap-3">
+            {% if role == 'secretary' or role == 'chairperson' %}
+            <a href="{% url 'add_amenity' %}?next=amenity_list" class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs shadow-flat transition-all flex items-center gap-2">
+                <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i>
+                Add New Amenity
+            </a>
+            {% endif %}
+            <a href="{% url 'my_bookings' %}" class="px-4 py-2.5 bg-portal-primary hover:bg-portal-primary/95 text-white font-bold rounded-xl text-xs shadow-flat transition-all flex items-center gap-2">
+                <i data-lucide="calendar" class="w-3.5 h-3.5"></i>
+                My Bookings
+            </a>
+        </div>
     </div>
 
     <!-- Amenities Responsive Card Grid -->

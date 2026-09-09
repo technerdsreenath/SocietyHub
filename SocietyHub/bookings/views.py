@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from .models import Amenity, AmenityBooking
-from .forms import AmenityBookingForm
+from .forms import AmenityBookingForm, AmenityForm
 import datetime
 
 @login_required(login_url='login')
@@ -262,4 +262,66 @@ def edit_amenity_price_view(request, amenity_id):
             messages.error(request, "Invalid booking fee value. Please enter a valid decimal number.")
             
     return redirect('amenity_list')
+
+
+@login_required(login_url='login')
+def add_amenity_view(request):
+    try:
+        profile = request.user.profile
+    except Exception:
+        messages.error(request, "User profile not found.")
+        return redirect('portal_dashboard')
+
+    if not profile.is_approved:
+        return redirect('portal_dashboard')
+
+    if profile.role not in ['secretary', 'chairperson']:
+        messages.error(request, "Access denied. Only committee members can add amenities.")
+        return redirect('portal_dashboard')
+
+    society = profile.society
+    if not society:
+        messages.error(request, "You are not assigned to any society.")
+        return redirect('portal_dashboard')
+
+    next_url = request.POST.get('next') or request.GET.get('next') or 'portal_dashboard'
+
+    if request.method == 'POST':
+        form = AmenityForm(request.POST)
+        if form.is_valid():
+            amenity = form.save(commit=False)
+            amenity.society = society
+            amenity.is_active = True
+            if amenity.booking_fee is None:
+                amenity.booking_fee = 0.00
+            amenity.save()
+            messages.success(request, f"Amenity '{amenity.name}' has been successfully added to {society.name}!")
+            if next_url == 'amenity_list':
+                return redirect('amenity_list')
+            return redirect('portal_dashboard')
+        else:
+            for field, errors in form.errors.items():
+                for error in errors:
+                    field_name = "Form" if field == '__all__' else field.replace('_', ' ').capitalize()
+                    messages.error(request, f"{field_name}: {error}")
+            if next_url == 'amenity_list':
+                return redirect('amenity_list')
+            elif next_url == 'portal_dashboard':
+                return redirect('portal_dashboard')
+            return render(request, 'bookings/add_amenity.html', {
+                'form': form,
+                'profile': profile,
+                'role': profile.role,
+                'society': society,
+                'next': next_url,
+            })
+
+    form = AmenityForm()
+    return render(request, 'bookings/add_amenity.html', {
+        'form': form,
+        'profile': profile,
+        'role': profile.role,
+        'society': society,
+        'next': next_url,
+    })
 

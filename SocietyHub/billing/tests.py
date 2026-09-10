@@ -59,3 +59,101 @@ class AutoDispatchAndAmenityTests(TestCase):
         self.assertEqual(tx.payment_type, 'maintenance')
         self.assertEqual(tx.status, 'pending')
         self.assertTrue('Auto Dispatched' in tx.remarks)
+
+
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.urls import reverse
+from SocietyHub.billing.models import AuditReport
+
+class AuditReportTests(TestCase):
+    def setUp(self):
+        # Society 1
+        self.society1 = Society.objects.create(name="Greenwood CHS", city="Mumbai", is_approved=True)
+        self.chair1_user = User.objects.create_user(username="chair1", password="password123")
+        self.chair1_profile = UserProfile.objects.create(
+            user=self.chair1_user, society=self.society1, role="chairperson", is_approved=True
+        )
+        self.resident1_user = User.objects.create_user(username="resident1", password="password123")
+        self.resident1_profile = UserProfile.objects.create(
+            user=self.resident1_user, society=self.society1, role="resident", is_approved=True, flat_name="101"
+        )
+
+        # Society 2
+        self.society2 = Society.objects.create(name="Bluebell CHS", city="Pune", is_approved=True)
+        self.resident2_user = User.objects.create_user(username="resident2", password="password123")
+        self.resident2_profile = UserProfile.objects.create(
+            user=self.resident2_user, society=self.society2, role="resident", is_approved=True, flat_name="202"
+        )
+
+        # Create dummy file
+        self.dummy_file = SimpleUploadedFile("audit_2025.pdf", b"%PDF-1.4 dummy audit report content", content_type="application/pdf")
+        self.report1 = AuditReport.objects.create(
+            society=self.society1,
+            title="Greenwood Audit FY 2025",
+            financial_year="2024-2025",
+            auditor_name="M/s ABC & Co.",
+            audit_date=datetime.date(2025, 6, 30),
+            file=self.dummy_file,
+            file_size_display="28 KB",
+            uploaded_by=self.chair1_user
+        )
+
+    def test_society1_member_can_view_reports(self):
+        self.client.login(username="resident1", password="password123")
+        resp = self.client.get(reverse('audit_reports_list'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "Greenwood Audit FY 2025")
+        self.assertContains(resp, "2024-2025")
+        # Resident should not see delete button
+        self.assertNotContains(resp, "delete_audit_report")
+
+    def test_chairperson_sees_upload_and_delete_controls(self):
+        self.client.login(username="chair1", password="password123")
+        resp = self.client.get(reverse('audit_reports_list'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "Upload Audit Report")
+        self.assertContains(resp, "delete_audit_report")
+
+    def test_society_isolation_in_listing(self):
+        # Resident of society 2 should NOT see Society 1's report
+        self.client.login(username="resident2", password="password123")
+        resp = self.client.get(reverse('audit_reports_list'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertNotContains(resp, "Greenwood Audit FY 2025")
+
+    def test_society_member_can_download_audit_report(self):
+        self.client.login(username="resident1", password="password123")
+        resp = self.client.get(reverse('download_audit_report', args=[self.report1.id]))
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp['Content-Type'], 'application/pdf')
+        self.assertIn(b'%PDF-1.4 dummy audit report content', resp.content)
+
+    def test_cross_society_download_is_blocked(self):
+        # Resident of society 2 attempting to download Society 1's report gets 404
+        self.client.login(username="resident2", password="password123")
+        resp = self.client.get(reverse('download_audit_report', args=[self.report1.id]))
+        self.assertEqual(resp.status_code, 404)
+
+    def test_chairperson_can_upload_report(self):
+        self.client.login(username="chair1", password="password123")
+        upload_file = SimpleUploadedFile("audit_2026.pdf", b"%PDF-1.4 audit 2026", content_type="application/pdf")
+        resp = self.client.post(reverse('upload_audit_report'), {
+            'title': 'Greenwood Audit FY 2026',
+            'financial_year': '2025-2026',
+            'auditor_name': 'CA Sharma',
+            'file': upload_file
+        }, follow=True)
+        self.assertEqual(resp.status_code, 200)
+        self.assertTrue(AuditReport.objects.filter(title='Greenwood Audit FY 2026', society=self.society1).exists())
+
+    def test_resident_cannot_upload_report(self):
+        self.client.login(username="resident1", password="password123")
+        upload_file = SimpleUploadedFile("hacked.pdf", b"bad", content_type="application/pdf")
+        resp = self.client.post(reverse('upload_audit_report'), {
+            'title': 'Unauthorized Audit',
+            'financial_year': '2025-2026',
+            'file': upload_file
+        }, follow=True)
+        # Should be forbidden or rejected
+        self.assertFalse(AuditReport.objects.filter(title='Unauthorized Audit').exists())
+

@@ -14,4 +14,8 @@ urlpatterns = [
     path('bills/bulk-delete/', views.delete_bulk_bills_view, name='delete_bulk_bills'),
     path('receipt/<int:pk>/', views.view_receipt_view, name='view_receipt'),
     path('receipt/<int:pk>/pdf/', views.download_receipt_pdf_view, name='download_receipt_pdf'),
+    path('audits/', views.audit_reports_list_view, name='audit_reports_list'),
+    path('audits/upload/', views.upload_audit_report_view, name='upload_audit_report'),
+    path('audits/<int:pk>/delete/', views.delete_audit_report_view, name='delete_audit_report'),
+    path('audits/<int:pk>/download/', views.download_audit_report_view, name='download_audit_report'),
 ]

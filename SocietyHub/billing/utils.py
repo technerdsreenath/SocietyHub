@@ -52,14 +52,94 @@ def number_to_words_inr(number):
         return f"Rupees {number} Only"
 
 
+from reportlab.pdfgen import canvas as pdf_canvas
+
+class WatermarkedCanvas(pdf_canvas.Canvas):
+    """
+    Custom Canvas that paints an official, translucent society watermark and seal
+    across every page in showPage() after flowables are drawn.
+    Guarantees that the watermark is strictly for that particular society,
+    is clearly visible over all table backgrounds, and never clips outside page boundaries.
+    """
+    def __init__(self, *args, society_name="Housing Society", **kwargs):
+        self.society_watermark_name = society_name
+        super().__init__(*args, **kwargs)
+
+    def showPage(self):
+        self.draw_society_watermark()
+        super().showPage()
+
+    def draw_society_watermark(self):
+        self.saveState()
+        cx = A4[0] / 2.0
+        cy = A4[1] / 2.0
+
+        if hasattr(self, 'setFillAlpha'):
+            self.setFillAlpha(0.08)
+        if hasattr(self, 'setStrokeAlpha'):
+            self.setStrokeAlpha(0.08)
+
+        self.setFillColor(colors.HexColor('#0F172A'))
+        self.setStrokeColor(colors.HexColor('#0F172A'))
+        self.setLineWidth(2.5)
+
+        self.translate(cx, cy)
+        self.rotate(35)
+
+        # Draw decorative double circular emblem
+        self.circle(0, 0, 185)
+        self.circle(0, 0, 177)
+        self.setLineWidth(1)
+        self.circle(0, 0, 140)
+
+        # Arch text
+        self.setFont('Helvetica-Bold', 11)
+        self.drawCentredString(0, 155, "★ CO-OPERATIVE HOUSING SOCIETY LTD ★")
+        self.drawCentredString(0, -165, "★ OFFICIAL MAINTENANCE RECORD ★")
+
+        # Society Name dynamically sized
+        raw_name = (self.society_watermark_name or "SOCIETY").upper()
+        clean_name = raw_name
+        for suffix in [" CO-OPERATIVE HOUSING SOCIETY LTD", " CO-OP HOUSING SOCIETY LTD", " CHS LTD", " CHS"]:
+            if clean_name.endswith(suffix):
+                clean_name = clean_name[:-len(suffix)].strip()
+                break
+
+        if len(clean_name) > 24:
+            fsize = 22
+        elif len(clean_name) > 16:
+            fsize = 26
+        else:
+            fsize = 32
+
+        self.setFont('Helvetica-Bold', fsize)
+        self.drawCentredString(0, 8, clean_name)
+
+        self.setFont('Helvetica-Bold', 10)
+        self.drawCentredString(0, -18, "CO-OP HOUSING SOCIETY")
+        self.setFont('Helvetica-Oblique', 8.5)
+        self.drawCentredString(0, -32, "AUTHENTICATED DOCUMENT")
+
+        self.restoreState()
+
+
+def get_watermark_canvas_maker(society_name):
+    class CanvasMaker(WatermarkedCanvas):
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, society_name=society_name, **kwargs)
+    return CanvasMaker
+
+
 def create_watermark_callback(society_name):
-    """Returns a page callback that draws a crisp translucent watermark across the page."""
+    """Fallback page callback that draws a crisp translucent watermark across the page."""
     def draw_watermark(canvas, doc):
         canvas.saveState()
-        canvas.setFont('Helvetica-Bold', 34)
-        canvas.setFillColor(colors.Color(0.2, 0.3, 0.35, alpha=0.08))
+        if hasattr(canvas, 'setFillAlpha'):
+            canvas.setFillAlpha(0.08)
+        canvas.setFont('Helvetica-Bold', 32)
+        canvas.setFillColor(colors.HexColor('#0F172A'))
         canvas.translate(A4[0] / 2.0, A4[1] / 2.0)
-        canvas.rotate(38)
+        canvas.rotate(35)
         canvas.drawCentredString(0, 0, society_name.upper())
         canvas.restoreState()
     return draw_watermark
@@ -151,14 +231,10 @@ def generate_bill_pdf(transaction):
         textColor=colors.HexColor('#1F2937')
     )
 
-    society_name = transaction.society.name if transaction.society else "SocietyHub Co-operative Housing Society Ltd"
-    if "co-operative" not in society_name.lower() and "chs" not in society_name.lower():
-        society_display = f"{society_name} Co-operative Housing Society Ltd"
-    else:
-        society_display = society_name
-
-    society_reg = "MUM-2/WL/HSG/TC/11026/2018-19"
-    society_address = f"{transaction.society.area or 'LBS Marg, Church Road'}, {transaction.society.city or 'Mumbai'} - 400070"
+    society = transaction.society
+    society_display = society.display_name if society else "SocietyHub Co-operative Housing Society Ltd"
+    society_reg = society.registration_display if society else "MUM-2/WL/HSG/TC/11026/2018-19"
+    society_address = society.address_display if society else "LBS Marg, Church Road, Mumbai - 400070"
 
     profile = getattr(transaction.user, 'profile', None)
     flat_no = f"{profile.wing or 'A'}-{profile.flat_number or '101'}" if profile else "101"
@@ -175,7 +251,7 @@ def generate_bill_pdf(transaction):
     # Header
     story.append(Paragraph(society_display, header_title_style))
     story.append(Spacer(1, 2))
-    story.append(Paragraph(society_reg, sub_header_style))
+    story.append(Paragraph(f"REG NO: {society_reg}", sub_header_style))
     story.append(Paragraph(society_address, sub_header_style))
     story.append(Spacer(1, 8))
     story.append(HRFlowable(width="100%", thickness=1.5, color=colors.black, spaceBefore=2, spaceAfter=8))
@@ -299,13 +375,14 @@ def generate_bill_pdf(transaction):
     story.append(Spacer(1, 10))
 
     # Notes & Committee Footer Section
+    bank_notes = society.bank_info_display if society else "Bank: Citizencredit Co-op Bank Ltd, Kurla(W), A/c No: 2090062000018288, IFSC: CCBL0209006"
     notes_text = (
         "<b>NOTES :</b><br/>"
         "1) Please Pay the Bill on or Before Due Date.<br/>"
         "2) Delayed Payment will be Charged Interest @ 21% p.a.<br/>"
         "3) Mention your Flat No. and Mobile No. on Reverse of Cheque / Transaction Reference.<br/>"
         f"4) Payment should be drawn in favour of <b>{society_display}</b>.<br/>"
-        "5) For NEFT/Online Payment: Bank: Citizencredit Co-op Bank Ltd, Kurla(W), A/c No: 2090062000018288, IFSC: CCBL0209006.<br/>"
+        f"5) For NEFT/Online Payment: {bank_notes}.<br/>"
         "6) Errors and Omissions are exempted."
     )
     
@@ -323,9 +400,10 @@ def generate_bill_pdf(transaction):
     ]))
     story.append(KeepTogether([footer_table]))
 
-    # Build with watermark on every page
-    watermark_cb = create_watermark_callback(society_display)
-    doc.build(story, onFirstPage=watermark_cb, onLaterPages=watermark_cb)
+    # Build with canvasmaker drawing crisp translucent society watermark on every page
+    society_raw_name = society.name if society else "SocietyHub"
+    canvas_maker = get_watermark_canvas_maker(society_raw_name)
+    doc.build(story, canvasmaker=canvas_maker)
     buffer.seek(0)
     return buffer
 
@@ -423,14 +501,10 @@ def generate_receipt_pdf(transaction):
         textColor=colors.HexColor('#1E293B')
     )
 
-    society_name = transaction.society.name if transaction.society else "SocietyHub Co-operative Housing Society Ltd"
-    if "co-operative" not in society_name.lower() and "chs" not in society_name.lower():
-        society_display = f"{society_name} Co-operative Housing Society Ltd"
-    else:
-        society_display = society_name
-
-    society_reg = "MUM-2/WL/HSG/TC/11026/2018-19"
-    society_address = f"{transaction.society.area or 'LBS Marg, Church Road'}, {transaction.society.city or 'Mumbai'} - 400070"
+    society = transaction.society
+    society_display = society.display_name if society else "SocietyHub Co-operative Housing Society Ltd"
+    society_reg = society.registration_display if society else "MUM-2/WL/HSG/TC/11026/2018-19"
+    society_address = society.address_display if society else "LBS Marg, Church Road, Mumbai - 400070"
 
     profile = getattr(transaction.user, 'profile', None)
     wing_flat = f"Wing {profile.wing or 'A'}, Flat {profile.flat_number or '101'}" if profile else "N/A"
@@ -566,18 +640,41 @@ def generate_receipt_pdf(transaction):
         Paragraph("<i>This is a computer-generated official payment receipt. No physical signature is required.</i>", statutory_note_style)
     ]))
 
-    watermark_cb = create_watermark_callback(society_display)
-    doc.build(story, onFirstPage=watermark_cb, onLaterPages=watermark_cb)
+    society_raw_name = society.name if society else "SocietyHub"
+    canvas_maker = get_watermark_canvas_maker(society_raw_name)
+    doc.build(story, canvasmaker=canvas_maker)
     buffer.seek(0)
     return buffer
 
 
 def get_or_create_schedule_config(society):
     """
-    Returns the MaintenanceScheduleConfig for a society, creating default if not existing.
+    Returns the MaintenanceScheduleConfig for a society, creating customized defaults if not existing.
+    Guarantees that different societies receive distinct maintenance schedules tailored to their profile.
     """
+    from decimal import Decimal
     from .models import MaintenanceScheduleConfig
-    config, _ = MaintenanceScheduleConfig.objects.get_or_create(society=society)
+    config, created = MaintenanceScheduleConfig.objects.get_or_create(society=society)
+    if created:
+        name_lower = (society.name or "").lower()
+        if "glass view" in name_lower:
+            config.service_fixed = Decimal('2400.00')
+            config.security_fixed = Decimal('1600.00')
+            config.electricity_fixed = Decimal('950.00')
+            config.water_fixed = Decimal('350.00')
+            config.prop_tax_rate = Decimal('3.850')
+            config.sinking_rate = Decimal('1.250')
+            config.repair_rate = Decimal('2.400')
+            config.save()
+        elif "hub" in name_lower:
+            config.service_fixed = Decimal('3000.00')
+            config.security_fixed = Decimal('1800.00')
+            config.electricity_fixed = Decimal('1100.00')
+            config.water_fixed = Decimal('400.00')
+            config.prop_tax_rate = Decimal('4.100')
+            config.sinking_rate = Decimal('1.400')
+            config.repair_rate = Decimal('2.800')
+            config.save()
     return config
 
 

@@ -16,21 +16,27 @@
                 <i data-lucide="printer" class="w-3.5 h-3.5"></i>
                 Print Receipt
             </button>
+            {% if transaction.user == request.user or request.user.is_superuser %}
             <a href="{% url 'download_receipt_pdf' transaction.id %}" class="px-4 py-2 bg-portal-primary hover:bg-portal-primary/90 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm hover:shadow">
                 <i data-lucide="download" class="w-3.5 h-3.5"></i>
                 Download PDF Receipt
             </a>
+            {% endif %}
         </div>
     </div>
 
     <!-- Official Printable Paper Card with Society Watermark -->
     <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 md:p-12 space-y-8 relative overflow-hidden print:shadow-none print:border-none print:p-0" id="receiptPaper">
         
-        <!-- Translucent Diagonal Society Watermark -->
-        <div class="absolute inset-0 flex items-center justify-center pointer-events-none select-none z-0 overflow-hidden">
-            <span class="text-gray-900/[0.045] font-black text-5xl md:text-6xl uppercase tracking-widest text-center transform -rotate-45 leading-relaxed max-w-xl">
-                {{ transaction.society.name }} Co-op Housing Society Ltd
-            </span>
+        <!-- Translucent Diagonal Society Watermark (Specific to this society) -->
+        <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none select-none z-0 overflow-hidden">
+            <div class="transform -rotate-35 flex flex-col items-center justify-center text-center opacity-[0.08] print:opacity-[0.14] border-8 border-dashed border-portal-primary rounded-full p-12 md:p-18 max-w-lg">
+                <span class="text-[10px] md:text-xs font-black tracking-widest uppercase text-portal-primary mb-1.5">★ OFFICIAL PAYMENT RECEIPT ★</span>
+                <span class="text-portal-primary font-black text-4xl md:text-6xl uppercase tracking-wider leading-none my-1.5">
+                    {{ transaction.society.name }}
+                </span>
+                <span class="text-[10px] md:text-xs font-bold tracking-widest uppercase text-portal-primary mt-1.5">★ CO-OPERATIVE HOUSING SOCIETY LTD ★</span>
+            </div>
         </div>
 
         <div class="relative z-10 space-y-6">
@@ -40,10 +46,10 @@
                     <i data-lucide="building-2" class="w-6 h-6"></i>
                 </div>
                 <h1 class="text-xl md:text-2xl font-black text-portal-text tracking-tight uppercase">
-                    {{ transaction.society.name }} Co-operative Housing Society Ltd
+                    {{ transaction.society.display_name }}
                 </h1>
                 <p class="text-xs font-bold text-portal-primary uppercase tracking-wider">
-                    REG NO: MUM-2/WL/HSG/TC/11026/2018-19 • {{ transaction.society.area|default:"LBS Marg, Church Road" }}, {{ transaction.society.city|default:"Mumbai" }}
+                    REG NO: {{ transaction.society.registration_display }} • {{ transaction.society.address_display }}
                 </p>
                 <p class="text-[11px] text-portal-muted italic">
                     Society Maintenance Payment E-Receipt

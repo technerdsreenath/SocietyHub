@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import PaymentTransaction, MaintenanceScheduleConfig
+from .models import PaymentTransaction, MaintenanceScheduleConfig, AuditReport
 
 @admin.register(PaymentTransaction)
 class PaymentTransactionAdmin(admin.ModelAdmin):
@@ -13,4 +13,12 @@ class MaintenanceScheduleConfigAdmin(admin.ModelAdmin):
     list_display = ('society', 'is_auto_dispatch_active', 'dispatch_day', 'frequency', 'due_days', 'last_dispatched_period', 'last_dispatched_date')
     list_filter = ('is_auto_dispatch_active', 'frequency')
     search_fields = ('society__name',)
+
+@admin.register(AuditReport)
+class AuditReportAdmin(admin.ModelAdmin):
+    list_display = ('title', 'society', 'financial_year', 'auditor_name', 'audit_date', 'file_size_display', 'uploaded_by', 'created_at')
+    list_filter = ('society', 'financial_year', 'audit_date')
+    search_fields = ('title', 'auditor_name', 'financial_year', 'society__name')
+    readonly_fields = ('file_size_display', 'created_at', 'updated_at')
+
 

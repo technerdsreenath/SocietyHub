@@ -119,6 +119,11 @@ def portal_dashboard(request):
 
         recent_transactions = chair_txns.select_related('user', 'user__profile').order_by('-created_at')[:8]
 
+        # Fetch real audit reports for chairperson's society
+        from SocietyHub.billing.models import AuditReport
+        from SocietyHub.billing.forms import AuditReportUploadForm
+        society_audit_reports = AuditReport.objects.filter(society=profile.society).order_by('-audit_date', '-created_at')
+
         context.update({
             'stats': {
                 'total_residents': total_residents,
@@ -129,7 +134,8 @@ def portal_dashboard(request):
                 'reserve_fund': f"₹{chair_total_collected:,.2f}"
             },
             'recent_transactions': recent_transactions,
-            'reports': [],
+            'reports': society_audit_reports,
+            'audit_upload_form': AuditReportUploadForm(),
             'notices': society_notices,
             'active_notices_count': society_notices.count(),
             'pending_secretaries': pending_secretaries,

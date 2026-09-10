@@ -11,7 +11,8 @@ from django.http import HttpResponse, JsonResponse, FileResponse, Http404
 from django.contrib import messages
 from django.conf import settings
 from django.views.decorators.csrf import csrf_exempt
-from .models import PaymentTransaction
+from .models import PaymentTransaction, AuditReport
+from .forms import AuditReportUploadForm
 from .utils import (
     generate_receipt_pdf, 
     generate_bill_pdf, 
@@ -238,11 +239,9 @@ def download_receipt_pdf_view(request, pk):
     transaction = get_object_or_404(PaymentTransaction, pk=pk)
     profile = getattr(request.user, 'profile', None)
 
-    is_owner = transaction.user == request.user
-    is_admin = profile and profile.role in ['secretary', 'chairperson'] and profile.society == transaction.society
-
-    if not (is_owner or is_admin):
-        raise Http404("You do not have permission to access this receipt.")
+    # Strictly restricted to the concerned user (the resident who made the payment)
+    if transaction.user != request.user and not request.user.is_superuser:
+        raise Http404("You do not have permission to access this receipt. Only the concerned paying resident can download the receipt.")
 
     if transaction.status != 'success':
         messages.warning(request, "Receipt is only available for successful payments.")
@@ -318,11 +317,9 @@ def view_receipt_view(request, pk):
     transaction = get_object_or_404(PaymentTransaction, pk=pk)
     profile = getattr(request.user, 'profile', None)
 
-    is_owner = transaction.user == request.user
-    is_admin = profile and profile.role in ['secretary', 'chairperson'] and profile.society == transaction.society
-
-    if not (is_owner or is_admin):
-        raise Http404("You do not have permission to view this receipt.")
+    # Strictly restricted to the concerned user (the resident who made the payment)
+    if transaction.user != request.user and not request.user.is_superuser:
+        raise Http404("You do not have permission to view this receipt. Only the concerned paying resident can view the receipt.")
 
     words = number_to_words_inr(transaction.amount)
     breakdown = transaction.get_breakdown()
@@ -447,18 +444,18 @@ def set_maintenance_view(request):
                     except Exception:
                         return Decimal(def_v)
 
-                schedule_config.prop_tax_rate = parse_rate('prop_tax_rate', '5.026')
-                schedule_config.prop_tax_fixed = parse_rate('prop_tax_fixed', '0.00')
-                schedule_config.sinking_rate = parse_rate('sinking_rate', '1.569')
-                schedule_config.sinking_fixed = parse_rate('sinking_fixed', '0.00')
-                schedule_config.repair_rate = parse_rate('repair_rate', '3.147')
-                schedule_config.repair_fixed = parse_rate('repair_fixed', '0.00')
-                schedule_config.service_fixed = parse_rate('service_fixed', '3600.00')
-                schedule_config.electricity_fixed = parse_rate('electricity_fixed', '1350.00')
-                schedule_config.water_fixed = parse_rate('water_fixed', '450.00')
-                schedule_config.security_fixed = parse_rate('security_fixed', '2100.00')
-                schedule_config.parking_fixed = parse_rate('parking_fixed', '0.00')
-                schedule_config.non_occupancy_fixed = parse_rate('non_occupancy_fixed', '0.00')
+                schedule_config.prop_tax_rate = parse_rate('prop_tax_rate', str(schedule_config.prop_tax_rate or '5.026'))
+                schedule_config.prop_tax_fixed = parse_rate('prop_tax_fixed', str(schedule_config.prop_tax_fixed or '0.00'))
+                schedule_config.sinking_rate = parse_rate('sinking_rate', str(schedule_config.sinking_rate or '1.569'))
+                schedule_config.sinking_fixed = parse_rate('sinking_fixed', str(schedule_config.sinking_fixed or '0.00'))
+                schedule_config.repair_rate = parse_rate('repair_rate', str(schedule_config.repair_rate or '3.147'))
+                schedule_config.repair_fixed = parse_rate('repair_fixed', str(schedule_config.repair_fixed or '0.00'))
+                schedule_config.service_fixed = parse_rate('service_fixed', str(schedule_config.service_fixed or '3600.00'))
+                schedule_config.electricity_fixed = parse_rate('electricity_fixed', str(schedule_config.electricity_fixed or '1350.00'))
+                schedule_config.water_fixed = parse_rate('water_fixed', str(schedule_config.water_fixed or '450.00'))
+                schedule_config.security_fixed = parse_rate('security_fixed', str(schedule_config.security_fixed or '2100.00'))
+                schedule_config.parking_fixed = parse_rate('parking_fixed', str(schedule_config.parking_fixed or '0.00'))
+                schedule_config.non_occupancy_fixed = parse_rate('non_occupancy_fixed', str(schedule_config.non_occupancy_fixed or '0.00'))
                 schedule_config.save()
 
                 next_d = schedule_config.get_next_dispatch_date()
@@ -470,16 +467,16 @@ def set_maintenance_view(request):
                 messages.error(request, f"Failed to save schedule settings: {e}")
             return redirect('set_maintenance')
 
-        # 2. Action: Immediate Trigger Scheduled Dispatch (Viva / Testing demonstration)
+        # 2. Action: Immediate Trigger Scheduled Dispatch (Strictly for this society only)
         elif action == 'trigger_auto_dispatch':
             res = execute_auto_dispatch_for_society(profile.society, force=True)
             if res.get('dispatched'):
-                messages.success(request, f"Scheduled Auto-Dispatch Run Succeeded: {res['reason']}")
+                messages.success(request, f"Scheduled Auto-Dispatch Run Succeeded for {profile.society.name}: {res['reason']}")
             else:
                 messages.warning(request, f"Auto-Dispatch Status: {res.get('reason')}")
             return redirect('billing_home')
 
-        # 3. Action: Manual Batch Bill Generation for Selected Residents
+        # 3. Action: Manual Batch Bill Generation for Selected Residents (Strictly for this society only)
         billing_period = request.POST.get('billing_period', 'July/August/September 2026').strip()
         bill_date_val = request.POST.get('bill_date')
         due_date_val = request.POST.get('due_date')
@@ -494,7 +491,7 @@ def set_maintenance_view(request):
         except Exception:
             due_date = bill_date + datetime.timedelta(days=60)
 
-        # Parse itemized statutory rates
+        # Parse itemized statutory rates from society's own schedule_config
         def parse_dec(key, default='0'):
             try:
                 v = request.POST.get(key, default).strip()
@@ -502,37 +499,37 @@ def set_maintenance_view(request):
             except Exception:
                 return Decimal(default)
 
-        # Rates & Fixed heads (Defaulted to Maharashtra CHS Model Bye-Law #67 standards)
-        prop_tax_rate = parse_dec('prop_tax_rate', '5.026')
-        prop_tax_fixed = parse_dec('prop_tax_fixed', '0.00')
+        # Rates & Fixed heads (Defaulted to this specific society's configured rates)
+        prop_tax_rate = parse_dec('prop_tax_rate', str(schedule_config.prop_tax_rate or '5.026'))
+        prop_tax_fixed = parse_dec('prop_tax_fixed', str(schedule_config.prop_tax_fixed or '0.00'))
 
-        sinking_rate = parse_dec('sinking_rate', '1.569')
-        sinking_fixed = parse_dec('sinking_fixed', '0.00')
+        sinking_rate = parse_dec('sinking_rate', str(schedule_config.sinking_rate or '1.569'))
+        sinking_fixed = parse_dec('sinking_fixed', str(schedule_config.sinking_fixed or '0.00'))
 
-        repair_rate = parse_dec('repair_rate', '3.147')
-        repair_fixed = parse_dec('repair_fixed', '0.00')
+        repair_rate = parse_dec('repair_rate', str(schedule_config.repair_rate or '3.147'))
+        repair_fixed = parse_dec('repair_fixed', str(schedule_config.repair_fixed or '0.00'))
 
-        service_rate = parse_dec('service_rate', '0.00')
-        service_fixed = parse_dec('service_fixed', '3600.00')
+        service_rate = parse_dec('service_rate', str(schedule_config.service_rate or '0.00'))
+        service_fixed = parse_dec('service_fixed', str(schedule_config.service_fixed or '3600.00'))
 
-        electricity_fixed = parse_dec('electricity_fixed', '1350.00')
-        water_fixed = parse_dec('water_fixed', '450.00')
-        security_fixed = parse_dec('security_fixed', '2100.00')
-        parking_fixed = parse_dec('parking_fixed', '0.00')
-        non_occupancy_fixed = parse_dec('non_occupancy_fixed', '0.00')
+        electricity_fixed = parse_dec('electricity_fixed', str(schedule_config.electricity_fixed or '1350.00'))
+        water_fixed = parse_dec('water_fixed', str(schedule_config.water_fixed or '450.00'))
+        security_fixed = parse_dec('security_fixed', str(schedule_config.security_fixed or '2100.00'))
+        parking_fixed = parse_dec('parking_fixed', str(schedule_config.parking_fixed or '0.00'))
+        non_occupancy_fixed = parse_dec('non_occupancy_fixed', str(schedule_config.non_occupancy_fixed or '0.00'))
 
         selected_user_ids = request.POST.getlist('selected_users')
         if not selected_user_ids:
-            messages.error(request, "Please select at least one resident/flat to generate maintenance bills.")
+            messages.error(request, f"Please select at least one resident/flat in {profile.society.name} to generate maintenance bills.")
             return redirect('set_maintenance')
 
         created_count = 0
         total_amount = Decimal('0')
 
-        # Sequential bill numbering
+        # Sequential bill numbering per society
         last_bill_seq = 28
         try:
-            last_b = PaymentTransaction.objects.exclude(bill_number__isnull=True).exclude(bill_number='').order_by('-id').first()
+            last_b = PaymentTransaction.objects.filter(society=profile.society).exclude(bill_number__isnull=True).exclude(bill_number='').order_by('-id').first()
             if last_b and last_b.bill_number:
                 last_bill_seq = int(''.join(filter(str.isdigit, str(last_b.bill_number))))
         except Exception:
@@ -540,7 +537,8 @@ def set_maintenance_view(request):
 
         for u_id in selected_user_ids:
             try:
-                user_prof = eligible_profiles.get(user_id=u_id)
+                # STRICT check: Resident must belong to THIS society only
+                user_prof = eligible_profiles.get(user_id=u_id, society=profile.society)
             except UserProfile.DoesNotExist:
                 continue
 
@@ -725,3 +723,139 @@ def delete_bulk_bills_view(request):
             messages.warning(request, "No bills were selected for deletion.")
 
     return redirect('billing_home')
+
+
+@login_required(login_url='login')
+def audit_reports_list_view(request):
+    """
+    Dedicated Society Financial & Statutory Audit Reports section.
+    Accessible to all approved residents, secretaries, and chairpersons of the society
+    to browse, search, and download official audit reports with society isolation.
+    """
+    profile = getattr(request.user, 'profile', None)
+    if not profile or not profile.is_approved:
+        return render(request, 'auth/pending_approval.html', {'profile': profile})
+
+    # Strictly filter audit reports for the user's society
+    reports = AuditReport.objects.filter(society=profile.society)
+
+    # Optional search query (title, auditor, financial year)
+    search_query = request.GET.get('q', '').strip()
+    if search_query:
+        from django.db.models import Q
+        reports = reports.filter(
+            Q(title__icontains=search_query) |
+            Q(financial_year__icontains=search_query) |
+            Q(auditor_name__icontains=search_query) |
+            Q(remarks__icontains=search_query)
+        )
+
+    reports = reports.order_by('-audit_date', '-created_at')
+
+    upload_form = AuditReportUploadForm() if profile.role == 'chairperson' or request.user.is_superuser else None
+
+    # Compute summary stats
+    total_audits = reports.count()
+    latest_report = reports.first()
+
+    return render(request, 'billing/audit_reports_list.html', {
+        'profile': profile,
+        'reports': reports,
+        'total_audits': total_audits,
+        'latest_report': latest_report,
+        'search_query': search_query,
+        'upload_form': upload_form,
+        'is_chairperson': profile.role == 'chairperson' or request.user.is_superuser,
+    })
+
+
+@login_required(login_url='login')
+def upload_audit_report_view(request):
+    """
+    Upload official society audit reports. Strictly restricted to the Chairperson of the society.
+    """
+    profile = getattr(request.user, 'profile', None)
+    if not profile or not profile.is_approved:
+        return render(request, 'auth/pending_approval.html', {'profile': profile})
+
+    if profile.role != 'chairperson' and not request.user.is_superuser:
+        messages.error(request, "Access restricted. Only the Society Chairperson can upload official audit reports.")
+        return redirect('audit_reports_list')
+
+    if request.method == 'POST':
+        form = AuditReportUploadForm(request.POST, request.FILES)
+        if form.is_valid():
+            report = form.save(commit=False)
+            report.society = profile.society
+            report.uploaded_by = request.user
+            report.save()
+            messages.success(
+                request,
+                f"Successfully uploaded Audit Report '{report.title}' for {profile.society.name}. It is now available for all society members."
+            )
+        else:
+            errors_str = " ".join([f"{f}: {e[0]}" for f, e in form.errors.items()])
+            messages.error(request, f"Failed to upload audit report: {errors_str}")
+
+    redirect_target = request.POST.get('next') or request.META.get('HTTP_REFERER') or 'audit_reports_list'
+    return redirect(redirect_target)
+
+
+@login_required(login_url='login')
+def delete_audit_report_view(request, pk):
+    """
+    Delete an audit report. Strictly restricted to the Society Chairperson.
+    """
+    profile = getattr(request.user, 'profile', None)
+    if not profile or not profile.is_approved:
+        return render(request, 'auth/pending_approval.html', {'profile': profile})
+
+    if profile.role != 'chairperson' and not request.user.is_superuser:
+        messages.error(request, "Permission denied. Only the Society Chairperson can remove audit reports.")
+        return redirect('audit_reports_list')
+
+    report = get_object_or_404(AuditReport, pk=pk)
+    if report.society != profile.society and not request.user.is_superuser:
+        messages.error(request, "Permission denied. You can only manage audit reports for your society.")
+        return redirect('audit_reports_list')
+
+    if request.method == 'POST':
+        report_title = report.title
+        # Delete file from disk if present
+        if report.file:
+            try:
+                report.file.delete(save=False)
+            except Exception:
+                pass
+        report.delete()
+        messages.success(request, f"Successfully removed Audit Report '{report_title}'.")
+
+    redirect_target = request.POST.get('next') or request.META.get('HTTP_REFERER') or 'audit_reports_list'
+    return redirect(redirect_target)
+
+
+@login_required(login_url='login')
+def download_audit_report_view(request, pk):
+    """
+    Securely download an official Society Audit Report.
+    Strictly verifies that the requesting user belongs to the same society as the report.
+    """
+    profile = getattr(request.user, 'profile', None)
+    if not profile or not profile.is_approved:
+        raise Http404("You do not have permission to download this audit report.")
+
+    report = get_object_or_404(AuditReport, pk=pk)
+
+    # Society isolation check
+    if report.society != profile.society and not request.user.is_superuser:
+        raise Http404("You do not have permission to download audit reports belonging to another society.")
+
+    if not report.file:
+        raise Http404("Audit report file not found on the server.")
+
+    try:
+        response = FileResponse(report.file.open('rb'), as_attachment=True, filename=report.file.name.split('/')[-1])
+        return response
+    except Exception as e:
+        raise Http404(f"Could not read audit file: {e}")
+

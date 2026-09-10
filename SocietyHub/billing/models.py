@@ -208,3 +208,47 @@ class MaintenanceScheduleConfig(models.Model):
                 next_year += 1
             return datetime.date(next_year, next_month, day)
 
+
+class AuditReport(models.Model):
+    """
+    Official Society Financial & Statutory Audit Reports uploaded by the Chairperson.
+    Downloadable and verifiable by all approved residents and committee members of the society.
+    """
+    society = models.ForeignKey(Society, on_delete=models.CASCADE, related_name='audit_reports')
+    title = models.CharField(max_length=255)
+    financial_year = models.CharField(max_length=50, blank=True, null=True, help_text="e.g. FY 2025-26")
+    auditor_name = models.CharField(max_length=255, blank=True, null=True, help_text="Chartered Accountant or Audit Firm Name")
+    audit_date = models.DateField(null=True, blank=True, help_text="Date audit completed or submitted")
+    file = models.FileField(upload_to='audit_reports/')
+    file_size_display = models.CharField(max_length=50, blank=True, null=True)
+    remarks = models.TextField(blank=True, null=True, help_text="Key auditor observations, opinions, or summary")
+    uploaded_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='uploaded_audits')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-audit_date', '-created_at']
+
+    def __str__(self):
+        year_str = f" ({self.financial_year})" if self.financial_year else ""
+        return f"{self.title}{year_str} - {self.society.name}"
+
+    def get_extension(self):
+        if self.file and '.' in self.file.name:
+            return self.file.name.rsplit('.', 1)[-1].upper()
+        return "PDF"
+
+    def save(self, *args, **kwargs):
+        if self.file and not self.file_size_display:
+            try:
+                size_bytes = self.file.size
+                if size_bytes < 1024:
+                    self.file_size_display = f"{size_bytes} B"
+                elif size_bytes < 1024 * 1024:
+                    self.file_size_display = f"{size_bytes / 1024:.1f} KB"
+                else:
+                    self.file_size_display = f"{size_bytes / (1024 * 1024):.1f} MB"
+            except Exception:
+                pass
+        super().save(*args, **kwargs)
+

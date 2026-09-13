@@ -152,6 +152,11 @@ class MaintenanceScheduleConfig(models.Model):
     security_fixed = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('2100.00'))
     parking_fixed = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
     non_occupancy_fixed = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
+    custom_heads = models.JSONField(
+        default=list, 
+        blank=True, 
+        help_text="Dynamic custom maintenance heads: [{'name': str, 'type': 'fixed'|'per_sqft', 'amount': float}]"
+    )
 
     last_dispatched_date = models.DateField(null=True, blank=True)
     last_dispatched_period = models.CharField(max_length=100, null=True, blank=True)

@@ -99,9 +99,10 @@
         </div>
 
         <!-- Schedule Settings Form -->
-        <form method="POST" class="space-y-4 pt-1">
+        <form method="POST" id="scheduleConfigForm" class="space-y-4 pt-1">
             {% csrf_token %}
             <input type="hidden" name="action" value="save_schedule">
+            <div id="customHeadsScheduleContainer"></div>
             <div class="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
                 <div class="sm:col-span-3 space-y-1">
                     <label class="block text-[10.5px] font-bold text-portal-text">Auto-Dispatch Engine</label>
@@ -454,6 +455,56 @@
                                 <input type="number" step="0.01" min="0" name="non_occupancy_fixed" id="non_occupancy_fixed" value="{{ schedule_config.non_occupancy_fixed|default:'0.00' }}" oninput="recalculateAll()"
                                     class="w-28 px-2.5 py-1.5 bg-white border border-portal-border rounded-lg text-xs font-semibold text-right">
                             </div>
+                        </div>
+                    </div>
+
+                    <!-- Section C: Dynamic Custom Maintenance Heads -->
+                    <div class="space-y-3 pt-3 border-t border-portal-border">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-bold text-portal-text flex items-center gap-1.5">
+                                <span class="w-2 h-2 rounded-full bg-purple-600"></span>
+                                C. Additional / Custom Maintenance Heads (Society Specific)
+                            </span>
+                            <button type="button" onclick="addCustomHeadRow()" class="px-2.5 py-1 bg-purple-50 hover:bg-purple-100 text-purple-800 border border-purple-200 rounded-lg text-[11px] font-bold transition-all flex items-center gap-1 cursor-pointer">
+                                <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                                + Add Custom Head
+                            </button>
+                        </div>
+                        <p class="text-[10.5px] text-portal-muted">
+                            Add society-specific heads like Lift AMC, Generator/Diesel, Clubhouse/Gym, or Festival Fund with customizable calculation mode.
+                        </p>
+
+                        <input type="hidden" name="custom_heads_submitted" value="1">
+                        <div id="customHeadsContainer" class="space-y-2.5">
+                            {% for ch in schedule_config.custom_heads %}
+                            <div class="custom-head-row grid grid-cols-1 sm:grid-cols-12 gap-2.5 items-center p-3 bg-purple-50/30 border border-purple-200/70 rounded-xl transition-all">
+                                <div class="sm:col-span-5 space-y-1">
+                                    <label class="text-[9.5px] font-bold text-purple-950 uppercase block">Head Title / Particular</label>
+                                    <input type="text" name="custom_head_name[]" value="{{ ch.name }}" placeholder="e.g. Lift AMC / Gym Charges" required
+                                        class="custom-head-name w-full px-2.5 py-1.5 bg-white border border-purple-200 rounded-lg text-xs font-bold text-portal-text focus:ring-1 focus:ring-purple-500">
+                                </div>
+                                <div class="sm:col-span-3 space-y-1">
+                                    <label class="text-[9.5px] font-bold text-purple-950 uppercase block">Calculation Type</label>
+                                    <select name="custom_head_type[]" onchange="recalculateAll()" class="custom-head-type w-full px-2.5 py-1.5 bg-white border border-purple-200 rounded-lg text-xs font-semibold text-portal-text focus:ring-1 focus:ring-purple-500">
+                                        <option value="fixed" {% if ch.type == 'fixed' %}selected{% endif %}>Fixed / Unit (₹)</option>
+                                        <option value="per_sqft" {% if ch.type == 'per_sqft' %}selected{% endif %}>Rate (₹/sqft Area)</option>
+                                    </select>
+                                </div>
+                                <div class="sm:col-span-3 space-y-1">
+                                    <label class="text-[9.5px] font-bold text-purple-950 uppercase block">Rate / Amount (₹)</label>
+                                    <input type="number" step="0.001" min="0" name="custom_head_amount[]" value="{{ ch.amount }}" oninput="recalculateAll()" required
+                                        class="custom-head-amount w-full px-2.5 py-1.5 bg-white border border-purple-200 rounded-lg text-xs font-bold text-portal-text text-right focus:ring-1 focus:ring-purple-500">
+                                </div>
+                                <div class="sm:col-span-1 flex justify-end pt-3 sm:pt-4">
+                                    <button type="button" onclick="removeCustomHeadRow(this)" title="Remove Head" class="p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-all cursor-pointer">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                    </button>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <div id="noCustomHeadsMessage" class="{% if schedule_config.custom_heads %}hidden{% endif %} p-3 bg-portal-bg/40 border border-dashed border-portal-border rounded-xl text-center">
+                            <span class="text-xs text-portal-muted">No custom heads added yet. Click <strong>+ Add Custom Head</strong> to add society-specific charges like Lift AMC, Generator, or Gym fees.</span>
                         </div>
                     </div>
                 </div>
@@ -829,8 +880,22 @@
         const parkingFixed = parseFloat(document.getElementById('parking_fixed').value) || 0;
         const nonOccupancyFixed = parseFloat(document.getElementById('non_occupancy_fixed').value) || 0;
 
-        const fixedTotal = propTaxFixed + sinkingFixed + repairFixed + serviceFixed + electricityFixed + waterFixed + securityFixed + parkingFixed + nonOccupancyFixed;
-        const combinedRate = propTaxRate + sinkingRate + repairRate + serviceRate;
+        let fixedTotal = propTaxFixed + sinkingFixed + repairFixed + serviceFixed + electricityFixed + waterFixed + securityFixed + parkingFixed + nonOccupancyFixed;
+        let combinedRate = propTaxRate + sinkingRate + repairRate + serviceRate;
+
+        // Custom heads calculation
+        const customRows = document.querySelectorAll('.custom-head-row');
+        customRows.forEach(row => {
+            const typeSelect = row.querySelector('.custom-head-type');
+            const amtInput = row.querySelector('.custom-head-amount');
+            const val = parseFloat(amtInput ? amtInput.value : 0) || 0;
+            const type = typeSelect ? typeSelect.value : 'fixed';
+            if (type === 'per_sqft') {
+                combinedRate += val;
+            } else {
+                fixedTotal += val;
+            }
+        });
 
         const sampleStandardTotal = (850 * combinedRate) + fixedTotal;
         const unitRateEl = document.getElementById('unitRateDisplay');
@@ -854,6 +919,91 @@
 
         updateTotals();
     }
+
+    function addCustomHeadRow(name = '', type = 'fixed', amount = '0.00') {
+        const container = document.getElementById('customHeadsContainer');
+        const emptyMsg = document.getElementById('noCustomHeadsMessage');
+        if (emptyMsg) emptyMsg.classList.add('hidden');
+
+        const row = document.createElement('div');
+        row.className = 'custom-head-row grid grid-cols-1 sm:grid-cols-12 gap-2.5 items-center p-3 bg-purple-50/30 border border-purple-200/70 rounded-xl transition-all';
+        row.innerHTML = `
+            <div class="sm:col-span-5 space-y-1">
+                <label class="text-[9.5px] font-bold text-purple-950 uppercase block">Head Title / Particular</label>
+                <input type="text" name="custom_head_name[]" value="${name}" placeholder="e.g. Lift AMC / Gym Charges" required
+                    class="custom-head-name w-full px-2.5 py-1.5 bg-white border border-purple-200 rounded-lg text-xs font-bold text-portal-text focus:ring-1 focus:ring-purple-500">
+            </div>
+            <div class="sm:col-span-3 space-y-1">
+                <label class="text-[9.5px] font-bold text-purple-950 uppercase block">Calculation Type</label>
+                <select name="custom_head_type[]" onchange="recalculateAll()" class="custom-head-type w-full px-2.5 py-1.5 bg-white border border-purple-200 rounded-lg text-xs font-semibold text-portal-text focus:ring-1 focus:ring-purple-500">
+                    <option value="fixed" ${type === 'fixed' ? 'selected' : ''}>Fixed / Unit (₹)</option>
+                    <option value="per_sqft" ${type === 'per_sqft' ? 'selected' : ''}>Rate (₹/sqft Area)</option>
+                </select>
+            </div>
+            <div class="sm:col-span-3 space-y-1">
+                <label class="text-[9.5px] font-bold text-purple-950 uppercase block">Rate / Amount (₹)</label>
+                <input type="number" step="0.001" min="0" name="custom_head_amount[]" value="${amount}" oninput="recalculateAll()" required
+                    class="custom-head-amount w-full px-2.5 py-1.5 bg-white border border-purple-200 rounded-lg text-xs font-bold text-portal-text text-right focus:ring-1 focus:ring-purple-500">
+            </div>
+            <div class="sm:col-span-1 flex justify-end pt-3 sm:pt-4">
+                <button type="button" onclick="removeCustomHeadRow(this)" title="Remove Head" class="p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-all cursor-pointer">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                </button>
+            </div>
+        `;
+        container.appendChild(row);
+        const nameInput = row.querySelector('.custom-head-name');
+        if (nameInput && !name) nameInput.focus();
+        recalculateAll();
+    }
+
+    function removeCustomHeadRow(btn) {
+        const row = btn.closest('.custom-head-row');
+        if (row) {
+            row.remove();
+            const container = document.getElementById('customHeadsContainer');
+            const emptyMsg = document.getElementById('noCustomHeadsMessage');
+            if (container && container.querySelectorAll('.custom-head-row').length === 0 && emptyMsg) {
+                emptyMsg.classList.remove('hidden');
+            }
+            recalculateAll();
+        }
+    }
+
+    // Attach submit listener to scheduleConfigForm to sync custom heads
+    document.addEventListener('DOMContentLoaded', function() {
+        const schedForm = document.getElementById('scheduleConfigForm');
+        if (schedForm) {
+            schedForm.addEventListener('submit', function() {
+                const schedContainer = document.getElementById('customHeadsScheduleContainer');
+                if (schedContainer) {
+                    schedContainer.innerHTML = '';
+                    document.querySelectorAll('.custom-head-row').forEach(row => {
+                        const name = row.querySelector('.custom-head-name')?.value || '';
+                        const type = row.querySelector('.custom-head-type')?.value || 'fixed';
+                        const amt = row.querySelector('.custom-head-amount')?.value || '0';
+                        if (name.trim()) {
+                            const iName = document.createElement('input');
+                            iName.type = 'hidden';
+                            iName.name = 'custom_head_name[]';
+                            iName.value = name.trim();
+                            const iType = document.createElement('input');
+                            iType.type = 'hidden';
+                            iType.name = 'custom_head_type[]';
+                            iType.value = type;
+                            const iAmt = document.createElement('input');
+                            iAmt.type = 'hidden';
+                            iAmt.name = 'custom_head_amount[]';
+                            iAmt.value = amt;
+                            schedContainer.appendChild(iName);
+                            schedContainer.appendChild(iType);
+                            schedContainer.appendChild(iAmt);
+                        }
+                    });
+                }
+            });
+        }
+    });
 
     function updateTotals() {
         const checkboxes = document.querySelectorAll('.resident-checkbox');

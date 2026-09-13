@@ -812,6 +812,16 @@ def execute_auto_dispatch_for_society(society, ref_date=None, force=False):
         if non_occupancy_fixed > 0:
             particulars_list.append({"particular": "NON-OCCUPANCY CHARGES", "amount": float(non_occupancy_fixed)})
 
+        # Custom heads defined in config
+        custom_heads = config.custom_heads or []
+        for ch in custom_heads:
+            ch_name = ch.get('name', '').strip()
+            ch_type = ch.get('type', 'fixed')
+            ch_val = Decimal(str(ch.get('amount', 0) or 0))
+            ch_amt = (sqft * ch_val) if ch_type == 'per_sqft' else ch_val
+            if ch_amt > Decimal('0'):
+                particulars_list.append({"particular": ch_name.upper(), "amount": float(ch_amt)})
+
         subtotal = sum(Decimal(str(item['amount'])) for item in particulars_list)
         if subtotal <= Decimal('0'):
             continue
@@ -837,7 +847,7 @@ def execute_auto_dispatch_for_society(society, ref_date=None, force=False):
             desc_parts.append(f"Flat: {user_prof.wing or ''}-{user_prof.flat_number or ''}")
         desc_parts.append(f"({sqft} sq.ft)")
 
-        PaymentTransaction.objects.create(
+        tx = PaymentTransaction.objects.create(
             user=user_prof.user,
             society=society,
             payment_type='maintenance',
@@ -855,6 +865,12 @@ def execute_auto_dispatch_for_society(society, ref_date=None, force=False):
         )
         created_count += 1
         total_amount += grand_total
+
+        try:
+            from SocietyHub.core.push import notify_maintenance_bill
+            notify_maintenance_bill(tx)
+        except Exception:
+            pass
 
     # Update config tracking
     config.last_dispatched_date = today

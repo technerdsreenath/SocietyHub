@@ -72,6 +72,11 @@ def accept_complaint_view(request, pk):
         complaint.status = 'In Progress'
         complaint.assigned_to = request.user
         complaint.save()
+        try:
+            from SocietyHub.core.push import notify_complaint_update
+            notify_complaint_update(complaint)
+        except Exception:
+            pass
         messages.success(request, f"You have accepted the complaint: {complaint.title}")
     return redirect('complaints_list')
 
@@ -85,6 +90,11 @@ def complete_complaint_view(request, pk):
     if complaint.status == 'In Progress':
         complaint.status = 'Completed'
         complaint.save()
+        try:
+            from SocietyHub.core.push import notify_complaint_update
+            notify_complaint_update(complaint)
+        except Exception:
+            pass
         messages.success(request, f"Complaint marked as completed/done: {complaint.title}")
     return redirect('complaints_list')
 

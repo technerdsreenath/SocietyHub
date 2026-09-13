@@ -456,6 +456,25 @@ def set_maintenance_view(request):
                 schedule_config.security_fixed = parse_rate('security_fixed', str(schedule_config.security_fixed or '2100.00'))
                 schedule_config.parking_fixed = parse_rate('parking_fixed', str(schedule_config.parking_fixed or '0.00'))
                 schedule_config.non_occupancy_fixed = parse_rate('non_occupancy_fixed', str(schedule_config.non_occupancy_fixed or '0.00'))
+
+                # Parse dynamic custom heads
+                c_names = request.POST.getlist('custom_head_name[]') or request.POST.getlist('custom_head_name')
+                c_types = request.POST.getlist('custom_head_type[]') or request.POST.getlist('custom_head_type')
+                c_amounts = request.POST.getlist('custom_head_amount[]') or request.POST.getlist('custom_head_amount')
+                cleaned_custom_heads = []
+                for cn, ct, ca in zip(c_names, c_types, c_amounts):
+                    cn = cn.strip()
+                    if cn:
+                        try:
+                            ca_val = float(Decimal(ca.strip())) if ca and ca.strip() else 0.0
+                            cleaned_custom_heads.append({
+                                'name': cn,
+                                'type': 'per_sqft' if ct == 'per_sqft' else 'fixed',
+                                'amount': ca_val
+                            })
+                        except Exception:
+                            pass
+                schedule_config.custom_heads = cleaned_custom_heads
                 schedule_config.save()
 
                 next_d = schedule_config.get_next_dispatch_date()
@@ -517,6 +536,31 @@ def set_maintenance_view(request):
         security_fixed = parse_dec('security_fixed', str(schedule_config.security_fixed or '2100.00'))
         parking_fixed = parse_dec('parking_fixed', str(schedule_config.parking_fixed or '0.00'))
         non_occupancy_fixed = parse_dec('non_occupancy_fixed', str(schedule_config.non_occupancy_fixed or '0.00'))
+
+        # Dynamic Custom Heads for generation
+        c_names = request.POST.getlist('custom_head_name[]') or request.POST.getlist('custom_head_name')
+        c_types = request.POST.getlist('custom_head_type[]') or request.POST.getlist('custom_head_type')
+        c_amounts = request.POST.getlist('custom_head_amount[]') or request.POST.getlist('custom_head_amount')
+        active_custom_heads = []
+        for cn, ct, ca in zip(c_names, c_types, c_amounts):
+            cn = cn.strip()
+            if cn:
+                try:
+                    ca_val = float(Decimal(ca.strip())) if ca and ca.strip() else 0.0
+                    active_custom_heads.append({
+                        'name': cn,
+                        'type': 'per_sqft' if ct == 'per_sqft' else 'fixed',
+                        'amount': ca_val
+                    })
+                except Exception:
+                    pass
+
+        # Update saved custom heads if provided in POST form
+        if active_custom_heads or ('custom_heads_submitted' in request.POST):
+            schedule_config.custom_heads = active_custom_heads
+            schedule_config.save(update_fields=['custom_heads'])
+        elif not active_custom_heads and schedule_config.custom_heads:
+            active_custom_heads = schedule_config.custom_heads
 
         selected_user_ids = request.POST.getlist('selected_users')
         if not selected_user_ids:
@@ -588,6 +632,15 @@ def set_maintenance_view(request):
             if non_occupancy_fixed > 0:
                 particulars_list.append({"particular": "NON-OCCUPANCY CHARGES", "amount": float(non_occupancy_fixed)})
 
+            # Custom heads calculation
+            for ch in active_custom_heads:
+                ch_name = ch.get('name', '').strip()
+                ch_type = ch.get('type', 'fixed')
+                ch_val = Decimal(str(ch.get('amount', 0) or 0))
+                ch_amt = (sqft * ch_val) if ch_type == 'per_sqft' else ch_val
+                if ch_amt > Decimal('0'):
+                    particulars_list.append({"particular": ch_name.upper(), "amount": float(ch_amt)})
+
             subtotal = sum(Decimal(str(item['amount'])) for item in particulars_list)
 
             # Check for custom manual total override
@@ -626,7 +679,7 @@ def set_maintenance_view(request):
                 desc_parts.append(f"Flat: {user_prof.wing or ''}-{user_prof.flat_number or ''}")
             desc_parts.append(f"({user_prof.area_sqft or 850} sq.ft)")
 
-            PaymentTransaction.objects.create(
+            tx = PaymentTransaction.objects.create(
                 user=user_prof.user,
                 society=profile.society,
                 payment_type='maintenance',
@@ -644,6 +697,12 @@ def set_maintenance_view(request):
             )
             created_count += 1
             total_amount += grand_total
+
+            try:
+                from SocietyHub.core.push import notify_maintenance_bill
+                notify_maintenance_bill(tx)
+            except Exception:
+                pass
 
         messages.success(
             request,
@@ -789,6 +848,13 @@ def upload_audit_report_view(request):
             report.society = profile.society
             report.uploaded_by = request.user
             report.save()
+
+            try:
+                from SocietyHub.core.push import notify_audit_report
+                notify_audit_report(report)
+            except Exception:
+                pass
+
             messages.success(
                 request,
                 f"Successfully uploaded Audit Report '{report.title}' for {profile.society.name}. It is now available for all society members."

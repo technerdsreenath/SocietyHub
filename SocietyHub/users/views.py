@@ -291,7 +291,7 @@ def secretary_notices_view(request):
             if not is_valid:
                 messages.error(request, error_msg)
             else:
-                Notice.objects.create(
+                notice = Notice.objects.create(
                     society=profile.society,
                     title=title,
                     content=content,
@@ -299,6 +299,12 @@ def secretary_notices_view(request):
                     notice_date=notice_date,
                     notice_time=notice_time
                 )
+                if status == 'Published':
+                    try:
+                        from SocietyHub.core.push import notify_society_notice
+                        notify_society_notice(notice)
+                    except Exception:
+                        pass
                 messages.success(request, "Notice published successfully!")
             return redirect('secretary_notices')
 

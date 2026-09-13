@@ -60,6 +60,35 @@ class AutoDispatchAndAmenityTests(TestCase):
         self.assertEqual(tx.status, 'pending')
         self.assertTrue('Auto Dispatched' in tx.remarks)
 
+    def test_custom_heads_in_auto_dispatch(self):
+        config = get_or_create_schedule_config(self.society)
+        config.custom_heads = [
+            {'name': 'Lift Maintenance AMC', 'type': 'fixed', 'amount': 750.0},
+            {'name': 'Solar Maintenance Fund', 'type': 'per_sqft', 'amount': 0.40}
+        ]
+        config.save()
+
+        # Delete any previous transactions for clean test
+        PaymentTransaction.objects.filter(society=self.society).delete()
+
+        res = execute_auto_dispatch_for_society(self.society, force=True)
+        self.assertTrue(res['dispatched'])
+
+        tx = PaymentTransaction.objects.filter(society=self.society, user=self.user).first()
+        self.assertIsNotNone(tx)
+        breakdown = tx.get_breakdown()
+        
+        # Verify custom heads appear in breakdown
+        lift_item = next((item for item in breakdown if item['particular'] == 'LIFT MAINTENANCE AMC'), None)
+        solar_item = next((item for item in breakdown if item['particular'] == 'SOLAR MAINTENANCE FUND'), None)
+
+        self.assertIsNotNone(lift_item, "Lift Maintenance AMC should be in itemized particulars")
+        self.assertEqual(lift_item['amount'], 750.0)
+
+        self.assertIsNotNone(solar_item, "Solar Maintenance Fund should be in itemized particulars")
+        # 1000 sqft * 0.40 = 400.00
+        self.assertEqual(solar_item['amount'], 400.0)
+
 
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse

@@ -150,3 +150,8 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Web Push Notification (VAPID) Settings
+VAPID_PUBLIC_KEY = os.getenv('VAPID_PUBLIC_KEY', 'BGWWKBL3Rb6kQdcf0Jn8Rj8q101njH20EFyPwkcNAlgkGgvDyEElt98O7PHfEFss1MrZab3z4RvFOHZIJDejsuI')
+VAPID_PRIVATE_KEY = os.getenv('VAPID_PRIVATE_KEY', 'xPIuHpz5_im3A_I_P0sWQ0yob44GVg86m0xSHmDWAEU')
+VAPID_CLAIM_EMAIL = os.getenv('VAPID_CLAIM_EMAIL', 'mailto:sreenathnair4112@gmail.com')

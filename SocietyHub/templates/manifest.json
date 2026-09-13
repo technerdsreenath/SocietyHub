@@ -1,0 +1,52 @@
+{
+  "name": "SocietyHub - Smart Housing Society",
+  "short_name": "SocietyHub",
+  "description": "Comprehensive Co-operative Housing Society Management Portal with Automated Billing, Notices, Amenities & Complaints",
+  "start_url": "/dashboard/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#F8F9FA",
+  "theme_color": "#1B3A32",
+  "categories": ["lifestyle", "utilities", "productivity"],
+  "icons": [
+    {
+      "src": "/static/images/pwa-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/static/images/pwa-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/static/images/pwa-icon-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "My Maintenance Bills",
+      "short_name": "Bills",
+      "url": "/billing/",
+      "icons": [{ "src": "/static/images/pwa-icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Society Notices",
+      "short_name": "Notices",
+      "url": "/users/secretary/notices/",
+      "icons": [{ "src": "/static/images/pwa-icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Book Facilities",
+      "short_name": "Amenities",
+      "url": "/bookings/amenities/",
+      "icons": [{ "src": "/static/images/pwa-icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}

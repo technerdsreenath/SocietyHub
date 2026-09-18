@@ -11,6 +11,7 @@ class Society(models.Model):
     # Official CHS Statutory Details
     registration_number = models.CharField(max_length=100, blank=True, null=True)
     bank_name = models.CharField(max_length=200, blank=True, null=True)
+
     bank_account_number = models.CharField(max_length=50, blank=True, null=True)
     bank_ifsc = models.CharField(max_length=30, blank=True, null=True)
 

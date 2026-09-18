@@ -47,8 +47,10 @@ class PaymentTransaction(models.Model):
     billing_period = models.CharField(max_length=100, null=True, blank=True)
     breakdown_json = models.TextField(null=True, blank=True) # Stores itemized particulars list as JSON
     subtotal_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    advance_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     arrears_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     interest_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    is_advance_adjusted = models.BooleanField(default=False, help_text="True if this pre-payment was adjusted into a subsequent bill")
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

@@ -41,7 +41,7 @@
         
         <!-- Diagonal Translucent Society Watermark (Specific to this society) -->
         <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none select-none z-0 overflow-hidden">
-            <div class="transform -rotate-35 flex flex-col items-center justify-center text-center opacity-[0.08] print:opacity-[0.14] border-8 border-dashed border-gray-900 rounded-full p-12 md:p-20 max-w-xl">
+            <div class="transform -rotate-35 flex flex-col items-center justify-center text-center opacity-[0.11] print:opacity-[0.16] border-8 border-dashed border-gray-900/70 rounded-full p-12 md:p-20 max-w-xl">
                 <span class="text-[11px] md:text-xs font-black tracking-widest uppercase text-gray-900 mb-2">★ CO-OPERATIVE HOUSING SOCIETY LTD ★</span>
                 <span class="text-gray-900 font-black text-5xl md:text-7xl uppercase tracking-wider leading-none my-2">
                     {{ transaction.society.name }}
@@ -145,6 +145,12 @@
                         <td class="p-2 border-r-2 border-gray-900">TOTAL :</td>
                         <td class="p-2 w-36 font-mono font-extrabold">{{ transaction.subtotal_amount|default:transaction.amount|floatformat:2 }}</td>
                     </tr>
+                    {% if transaction.advance_amount and transaction.advance_amount > 0 %}
+                    <tr class="border-b border-gray-300 bg-emerald-50/60 font-semibold text-emerald-800">
+                        <td class="p-2 border-r-2 border-gray-900">Less: Advance / Pre-paid Credit :</td>
+                        <td class="p-2 w-36 font-mono font-bold text-emerald-700">- {{ transaction.advance_amount|floatformat:2 }}</td>
+                    </tr>
+                    {% endif %}
                     <tr class="border-b border-gray-300">
                         <td class="p-2 border-r-2 border-gray-900 text-gray-700">Arrears Amount :</td>
                         <td class="p-2 w-36 font-mono">{{ transaction.arrears_amount|default:"0.00"|floatformat:2 }}</td>
@@ -157,7 +163,7 @@
                         <td class="p-2 border-r-2 border-gray-900 text-gray-700">Current Interest 21% p.a. on Arrears :</td>
                         <td class="p-2 w-36 font-mono">{{ transaction.interest_amount|default:"0.00"|floatformat:2 }}</td>
                     </tr>
-                    <tr class="bg-gray-100 font-extrabold text-sm text-gray-900">
+                    <tr class="bg-gray-100/40 font-extrabold text-sm text-gray-900">
                         <td class="p-3 border-r-2 border-gray-900 uppercase">GRAND TOTAL PAYABLE :</td>
                         <td class="p-3 w-36 font-mono text-base font-black">₹ {{ transaction.amount|floatformat:2 }}</td>
                     </tr>
@@ -165,7 +171,7 @@
             </div>
 
             <!-- Words Box -->
-            <div class="border border-gray-900 p-2.5 text-xs font-bold bg-gray-50/50">
+            <div class="border border-gray-900 p-2.5 text-xs font-bold bg-transparent">
                 ({{ amount_in_words }})
             </div>
 

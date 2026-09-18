@@ -30,7 +30,7 @@
         
         <!-- Translucent Diagonal Society Watermark (Specific to this society) -->
         <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none select-none z-0 overflow-hidden">
-            <div class="transform -rotate-35 flex flex-col items-center justify-center text-center opacity-[0.08] print:opacity-[0.14] border-8 border-dashed border-portal-primary rounded-full p-12 md:p-18 max-w-lg">
+            <div class="transform -rotate-35 flex flex-col items-center justify-center text-center opacity-[0.12] print:opacity-[0.18] border-8 border-dashed border-portal-primary/70 rounded-full p-12 md:p-18 max-w-lg">
                 <span class="text-[10px] md:text-xs font-black tracking-widest uppercase text-portal-primary mb-1.5">★ OFFICIAL PAYMENT RECEIPT ★</span>
                 <span class="text-portal-primary font-black text-4xl md:text-6xl uppercase tracking-wider leading-none my-1.5">
                     {{ transaction.society.name }}
@@ -57,7 +57,7 @@
             </div>
 
             <!-- Receipt Metadata Grid -->
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-portal-bg/60 rounded-xl border border-portal-border text-xs">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-portal-bg/25 backdrop-blur-[1px] rounded-xl border border-portal-border text-xs">
                 <div>
                     <span class="text-[10px] text-portal-muted uppercase font-bold block">Receipt Number</span>
                     <span class="font-bold text-portal-primary font-mono text-sm">{{ transaction.receipt_number|default:transaction.id }}</span>
@@ -80,7 +80,7 @@
             </div>
 
             <!-- Resident Information Box -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 border border-portal-border rounded-xl p-4 text-xs">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 border border-portal-border rounded-xl p-4 text-xs bg-white/30 backdrop-blur-[1px]">
                 <div>
                     <span class="text-[10px] text-portal-muted uppercase font-bold block">Resident / Member Name</span>
                     <span class="font-bold text-portal-text text-sm uppercase">MR. {{ transaction.user.get_full_name|default:transaction.user.username }}</span>
@@ -103,7 +103,7 @@
                 <h4 class="text-xs font-bold text-portal-text uppercase tracking-wider">
                     Breakdown of Received Maintenance Charges
                 </h4>
-                <div class="overflow-hidden border border-portal-primary/30 rounded-xl">
+                <div class="overflow-hidden border border-portal-primary/30 rounded-xl bg-transparent backdrop-blur-[1px]">
                     <table class="w-full text-left text-xs">
                         <thead class="bg-portal-primary text-white text-[11px] font-bold">
                             <tr>
@@ -113,7 +113,7 @@
                                 <th class="py-3 px-4 text-right">Amount (INR)</th>
                             </tr>
                         </thead>
-                        <tbody class="divide-y divide-portal-border bg-white">
+                        <tbody class="divide-y divide-portal-border bg-transparent">
                             {% for item in breakdown %}
                             <tr>
                                 <td class="py-3 px-4 font-semibold text-portal-muted text-center">{{ forloop.counter }}</td>
@@ -131,9 +131,46 @@
                                 <td class="py-3 px-4 text-right font-bold text-portal-text font-mono">₹{{ transaction.amount|floatformat:2 }}</td>
                             </tr>
                             {% endfor %}
-                            <tr class="bg-portal-bg/80 font-bold">
-                                <td colspan="3" class="py-3.5 px-4 text-right uppercase text-portal-text">Total Amount Paid (Reconciled):</td>
-                                <td class="py-3.5 px-4 text-right text-sm text-portal-primary font-black font-mono">₹{{ transaction.amount|floatformat:2 }}</td>
+
+                            {% if transaction.arrears_amount > 0 or transaction.interest_amount > 0 %}
+                            <!-- Subtotal of Current Assessment Heads -->
+                            <tr class="bg-slate-50/40 font-bold border-t border-portal-border text-portal-text">
+                                <td colspan="3" class="py-2.5 px-4 text-right uppercase text-[11px] text-portal-muted tracking-wider">
+                                    Current Assessment Charges Subtotal:
+                                </td>
+                                <td class="py-2.5 px-4 text-right font-mono font-bold text-portal-text">
+                                    ₹{{ transaction.subtotal_amount|default:transaction.amount|floatformat:2 }}
+                                </td>
+                            </tr>
+
+                            {% if transaction.arrears_amount and transaction.arrears_amount > 0 %}
+                            <!-- Previous Unpaid Arrears -->
+                            <tr class="bg-amber-50/25">
+                                <td class="py-3 px-4 font-bold text-amber-700 text-center font-mono">+</td>
+                                <td class="py-3 px-4">
+                                    <span class="font-bold text-amber-950 uppercase">PREVIOUS UNPAID ARREARS</span>
+                                </td>
+                                <td class="py-3 px-4 font-semibold text-amber-700">Arrears Dues</td>
+                                <td class="py-3 px-4 text-right font-bold text-amber-950 font-mono">₹{{ transaction.arrears_amount|floatformat:2 }}</td>
+                            </tr>
+                            {% endif %}
+
+                            {% if transaction.interest_amount and transaction.interest_amount > 0 %}
+                            <!-- Delayed Payment Interest -->
+                            <tr class="bg-amber-50/25">
+                                <td class="py-3 px-4 font-bold text-amber-700 text-center font-mono">+</td>
+                                <td class="py-3 px-4">
+                                    <span class="font-bold text-amber-950 uppercase">INTEREST ON ARREARS (21% P.A.)</span>
+                                </td>
+                                <td class="py-3 px-4 font-semibold text-amber-700">Statutory Interest</td>
+                                <td class="py-3 px-4 text-right font-bold text-amber-950 font-mono">₹{{ transaction.interest_amount|floatformat:2 }}</td>
+                            </tr>
+                            {% endif %}
+                            {% endif %}
+
+                            <tr class="bg-portal-bg/40 font-black border-t-2 border-portal-primary/30">
+                                <td colspan="3" class="py-3.5 px-4 text-right uppercase text-portal-text tracking-wider">Total Amount Paid (Reconciled):</td>
+                                <td class="py-3.5 px-4 text-right text-base text-portal-primary font-black font-mono">₹{{ transaction.amount|floatformat:2 }}</td>
                             </tr>
                         </tbody>
                     </table>
@@ -141,7 +178,7 @@
             </div>
 
             <!-- Amount in Words -->
-            <div class="border border-portal-border rounded-xl p-3 text-xs font-bold bg-portal-bg/40 text-portal-text">
+            <div class="border border-portal-border rounded-xl p-3 text-xs font-bold bg-portal-bg/25 text-portal-text">
                 Amount in Words: <i>{{ amount_in_words }}</i>
             </div>
 

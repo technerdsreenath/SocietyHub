@@ -54,73 +54,81 @@ def number_to_words_inr(number):
 
 from reportlab.pdfgen import canvas as pdf_canvas
 
+def draw_society_watermark(canvas, doc=None, society_name="Housing Society"):
+    """
+    Renders an authentic, translucent Maharashtra CHS circular watermark emblem
+    in the background of the page BEFORE tables and text are drawn.
+    Guarantees that the watermark is translucent (alpha=0.08) and never obscures text.
+    """
+    if not society_name and isinstance(doc, str):
+        society_name = doc
+    canvas.saveState()
+    cx = A4[0] / 2.0
+    cy = A4[1] / 2.0
+
+    # Gentle slate color - clearly visible through transparent tables without obscuring text
+    wm_color = colors.HexColor('#64748B')
+    canvas.setFillColor(wm_color)
+    canvas.setStrokeColor(wm_color)
+
+    # CRITICAL: setFillAlpha and setStrokeAlpha MUST be applied AFTER setFillColor/setStrokeColor
+    # because setFillColor/setStrokeColor in ReportLab resets the graphics state alpha to 1.0.
+    if hasattr(canvas, 'setFillAlpha'):
+        canvas.setFillAlpha(0.08)
+    if hasattr(canvas, 'setStrokeAlpha'):
+        canvas.setStrokeAlpha(0.08)
+
+    canvas.setLineWidth(1.2)
+    canvas.translate(cx, cy)
+    canvas.rotate(35)
+
+    # Draw decorative double circular emblem
+    canvas.circle(0, 0, 185)
+    canvas.circle(0, 0, 177)
+    canvas.setLineWidth(0.8)
+    canvas.circle(0, 0, 140)
+
+    # Arch text
+    canvas.setFont('Helvetica-Bold', 11)
+    canvas.drawCentredString(0, 155, "★ CO-OPERATIVE HOUSING SOCIETY LTD ★")
+    canvas.drawCentredString(0, -165, "★ OFFICIAL MAINTENANCE RECORD ★")
+
+    # Society Name dynamically sized
+    raw_name = (society_name or "SOCIETY").upper()
+    clean_name = raw_name
+    for suffix in [" CO-OPERATIVE HOUSING SOCIETY LTD", " CO-OP HOUSING SOCIETY LTD", " CHS LTD", " CHS"]:
+        if clean_name.endswith(suffix):
+            clean_name = clean_name[:-len(suffix)].strip()
+            break
+
+    if len(clean_name) > 24:
+        fsize = 20
+    elif len(clean_name) > 16:
+        fsize = 24
+    else:
+        fsize = 30
+
+    canvas.setFont('Helvetica-Bold', fsize)
+    canvas.drawCentredString(0, 8, clean_name)
+
+    canvas.setFont('Helvetica-Bold', 9.5)
+    canvas.drawCentredString(0, -18, "CO-OP HOUSING SOCIETY")
+    canvas.setFont('Helvetica-Oblique', 8)
+    canvas.drawCentredString(0, -32, "AUTHENTICATED DOCUMENT")
+
+    canvas.restoreState()
+
+
 class WatermarkedCanvas(pdf_canvas.Canvas):
     """
-    Custom Canvas that paints an official, translucent society watermark and seal
-    across every page in showPage() after flowables are drawn.
-    Guarantees that the watermark is strictly for that particular society,
-    is clearly visible over all table backgrounds, and never clips outside page boundaries.
+    Custom Canvas that ensures page backgrounds and watermarks render cleanly.
     """
     def __init__(self, *args, society_name="Housing Society", **kwargs):
         self.society_watermark_name = society_name
         super().__init__(*args, **kwargs)
 
     def showPage(self):
-        self.draw_society_watermark()
         super().showPage()
-
-    def draw_society_watermark(self):
-        self.saveState()
-        cx = A4[0] / 2.0
-        cy = A4[1] / 2.0
-
-        if hasattr(self, 'setFillAlpha'):
-            self.setFillAlpha(0.08)
-        if hasattr(self, 'setStrokeAlpha'):
-            self.setStrokeAlpha(0.08)
-
-        self.setFillColor(colors.HexColor('#0F172A'))
-        self.setStrokeColor(colors.HexColor('#0F172A'))
-        self.setLineWidth(2.5)
-
-        self.translate(cx, cy)
-        self.rotate(35)
-
-        # Draw decorative double circular emblem
-        self.circle(0, 0, 185)
-        self.circle(0, 0, 177)
-        self.setLineWidth(1)
-        self.circle(0, 0, 140)
-
-        # Arch text
-        self.setFont('Helvetica-Bold', 11)
-        self.drawCentredString(0, 155, "★ CO-OPERATIVE HOUSING SOCIETY LTD ★")
-        self.drawCentredString(0, -165, "★ OFFICIAL MAINTENANCE RECORD ★")
-
-        # Society Name dynamically sized
-        raw_name = (self.society_watermark_name or "SOCIETY").upper()
-        clean_name = raw_name
-        for suffix in [" CO-OPERATIVE HOUSING SOCIETY LTD", " CO-OP HOUSING SOCIETY LTD", " CHS LTD", " CHS"]:
-            if clean_name.endswith(suffix):
-                clean_name = clean_name[:-len(suffix)].strip()
-                break
-
-        if len(clean_name) > 24:
-            fsize = 22
-        elif len(clean_name) > 16:
-            fsize = 26
-        else:
-            fsize = 32
-
-        self.setFont('Helvetica-Bold', fsize)
-        self.drawCentredString(0, 8, clean_name)
-
-        self.setFont('Helvetica-Bold', 10)
-        self.drawCentredString(0, -18, "CO-OP HOUSING SOCIETY")
-        self.setFont('Helvetica-Oblique', 8.5)
-        self.drawCentredString(0, -32, "AUTHENTICATED DOCUMENT")
-
-        self.restoreState()
 
 
 def get_watermark_canvas_maker(society_name):
@@ -131,17 +139,9 @@ def get_watermark_canvas_maker(society_name):
 
 
 def create_watermark_callback(society_name):
-    """Fallback page callback that draws a crisp translucent watermark across the page."""
+    """Page callback that draws a crisp translucent watermark in the background of each page."""
     def draw_watermark(canvas, doc):
-        canvas.saveState()
-        if hasattr(canvas, 'setFillAlpha'):
-            canvas.setFillAlpha(0.08)
-        canvas.setFont('Helvetica-Bold', 32)
-        canvas.setFillColor(colors.HexColor('#0F172A'))
-        canvas.translate(A4[0] / 2.0, A4[1] / 2.0)
-        canvas.rotate(35)
-        canvas.drawCentredString(0, 0, society_name.upper())
-        canvas.restoreState()
+        draw_society_watermark(canvas, doc, society_name=society_name)
     return draw_watermark
 
 
@@ -335,18 +335,26 @@ def generate_bill_pdf(transaction):
     ]))
     story.append(particulars_table)
 
-    # Summary Table: TOTAL, Arrears, Interest, GRAND TOTAL
-    arrears = float(transaction.arrears_amount)
-    interest = float(transaction.interest_amount)
+    # Summary Table: TOTAL, Advance Credit, Arrears, Interest, GRAND TOTAL
+    arrears = float(transaction.arrears_amount or 0)
+    advance = float(transaction.advance_amount or 0)
+    interest = float(transaction.interest_amount or 0)
     grand_total = float(transaction.amount)
 
     summary_rows = [
         [Paragraph("<b>TOTAL :</b>", cell_right_bold), Paragraph(f"<b>{subtotal:,.2f}</b>", cell_right_bold)],
+    ]
+    if advance > 0:
+        summary_rows.append([
+            Paragraph("<b>Less: Advance / Pre-paid Credit :</b>", cell_right_bold), 
+            Paragraph(f"-{advance:,.2f}", cell_right)
+        ])
+    summary_rows.extend([
         [Paragraph("<b>Arrears Amount :</b>", cell_right_bold), Paragraph(f"{arrears:,.2f}", cell_right)],
         [Paragraph("<b>Pending Interest Amount :</b>", cell_right_bold), Paragraph("0.00", cell_right)],
         [Paragraph("<b>Current Interest 21% p.a. on Arrears :</b>", cell_right_bold), Paragraph(f"{interest:,.2f}", cell_right)],
-        [Paragraph("<b>GRAND TOTAL PAYABLE :</b>", cell_right_bold), Paragraph(f"<b>₹ {grand_total:,.2f}</b>", cell_right_bold)],
-    ]
+        [Paragraph("<b>GRAND TOTAL PAYABLE :</b>", cell_right_bold), Paragraph(f"<b>Rs. {grand_total:,.2f}</b>", cell_right_bold)],
+    ])
     summary_table = Table(summary_rows, colWidths=[420, 105])
     summary_table.setStyle(TableStyle([
         ('BOX', (0,0), (-1,-1), 1, colors.black),
@@ -355,7 +363,6 @@ def generate_bill_pdf(transaction):
         ('BOTTOMPADDING', (0,0), (-1,-1), 4),
         ('LEFTPADDING', (0,0), (-1,-1), 6),
         ('RIGHTPADDING', (0,0), (-1,-1), 6),
-        ('BACKGROUND', (0,-1), (-1,-1), colors.HexColor('#F9FAFB')),
         ('LINEABOVE', (0,-1), (-1,-1), 1, colors.black),
     ]))
     story.append(summary_table)
@@ -400,10 +407,13 @@ def generate_bill_pdf(transaction):
     ]))
     story.append(KeepTogether([footer_table]))
 
-    # Build with canvasmaker drawing crisp translucent society watermark on every page
+    # Build with background translucent society watermark on every page
     society_raw_name = society.name if society else "SocietyHub"
+    def wm_callback(c, d):
+        draw_society_watermark(c, d, society_name=society_raw_name)
+
     canvas_maker = get_watermark_canvas_maker(society_raw_name)
-    doc.build(story, canvasmaker=canvas_maker)
+    doc.build(story, canvasmaker=canvas_maker, onFirstPage=wm_callback, onLaterPages=wm_callback)
     buffer.seek(0)
     return buffer
 
@@ -546,9 +556,8 @@ def generate_receipt_pdf(transaction):
 
     meta_table = Table(meta_data, colWidths=[95, 165, 100, 165])
     meta_table.setStyle(TableStyle([
-        ('BACKGROUND', (0,0), (-1,-1), colors.HexColor('#F8FAFC')),
-        ('BOX', (0,0), (-1,-1), 0.5, colors.HexColor('#CBD5E1')),
-        ('INNERGRID', (0,0), (-1,-1), 0.25, colors.HexColor('#E2E8F0')),
+        ('BOX', (0,0), (-1,-1), 0.75, colors.HexColor('#94A3B8')),
+        ('INNERGRID', (0,0), (-1,-1), 0.5, colors.HexColor('#CBD5E1')),
         ('TOPPADDING', (0,0), (-1,-1), 5),
         ('BOTTOMPADDING', (0,0), (-1,-1), 5),
         ('LEFTPADDING', (0,0), (-1,-1), 8),
@@ -578,28 +587,55 @@ def generate_receipt_pdf(transaction):
             Paragraph(str(idx), table_cell),
             Paragraph(f"<b>{p_name}</b>", table_cell),
             Paragraph("Maintenance", table_cell),
-            Paragraph(f"₹ {p_amt:,.2f}", table_cell_bold),
+            Paragraph(f"Rs. {p_amt:,.2f}", table_cell_bold),
+        ])
+
+    has_arrears = bool(transaction.arrears_amount and transaction.arrears_amount > 0)
+    has_interest = bool(transaction.interest_amount and transaction.interest_amount > 0)
+
+    if has_arrears or has_interest:
+        subtotal = float(transaction.subtotal_amount) if transaction.subtotal_amount else sum(float(item.get('amount', 0)) for item in breakdown)
+        items_data.append([
+            Paragraph("", table_cell),
+            Paragraph("<b>Current Assessment Charges Subtotal</b>", table_cell_bold),
+            Paragraph("Subtotal", table_cell),
+            Paragraph(f"Rs. {subtotal:,.2f}", table_cell_bold),
+        ])
+
+    if has_arrears:
+        items_data.append([
+            Paragraph("+", table_cell_bold),
+            Paragraph("<b>PREVIOUS UNPAID ARREARS</b>", table_cell_bold),
+            Paragraph("Arrears Dues", table_cell),
+            Paragraph(f"Rs. {float(transaction.arrears_amount):,.2f}", table_cell_bold),
+        ])
+
+    if has_interest:
+        items_data.append([
+            Paragraph("+", table_cell_bold),
+            Paragraph("<b>INTEREST ON ARREARS (21% P.A.)</b>", table_cell_bold),
+            Paragraph("Statutory Interest", table_cell),
+            Paragraph(f"Rs. {float(transaction.interest_amount):,.2f}", table_cell_bold),
         ])
 
     items_data.append([
         Paragraph("", table_cell),
-        Paragraph("<b>Total Amount Paid (INR)</b>", table_cell_bold),
+        Paragraph("<b>Total Amount Paid (Reconciled)</b>", table_cell_bold),
         Paragraph("", table_cell),
-        Paragraph(f"<b>₹ {transaction.amount:,.2f}</b>", table_cell_bold),
+        Paragraph(f"<b>Rs. {float(transaction.amount):,.2f}</b>", table_cell_bold),
     ])
 
     items_table = Table(items_data, colWidths=[35, 285, 95, 110])
     items_table.setStyle(TableStyle([
-        ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#4F6D7A')),
+        ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#1E293B')),
         ('TEXTCOLOR', (0,0), (-1,0), colors.white),
         ('ALIGN', (0,0), (-1,-1), 'LEFT'),
         ('ALIGN', (3,0), (3,-1), 'RIGHT'),
-        ('BOX', (0,0), (-1,-1), 1, colors.HexColor('#4F6D7A')),
-        ('INNERGRID', (0,0), (-1,-2), 0.5, colors.HexColor('#E2E8F0')),
-        ('BACKGROUND', (0,-1), (-1,-1), colors.HexColor('#F1F5F9')),
-        ('LINEABOVE', (0,-1), (-1,-1), 1, colors.HexColor('#4F6D7A')),
-        ('TOPPADDING', (0,0), (-1,-1), 6),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 6),
+        ('BOX', (0,0), (-1,-1), 1, colors.HexColor('#475569')),
+        ('INNERGRID', (0,0), (-1,-2), 0.5, colors.HexColor('#CBD5E1')),
+        ('LINEABOVE', (0,-1), (-1,-1), 1.2, colors.HexColor('#1E293B')),
+        ('TOPPADDING', (0,0), (-1,-1), 5.5),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 5.5),
         ('LEFTPADDING', (0,0), (-1,-1), 8),
         ('RIGHTPADDING', (0,0), (-1,-1), 8),
     ]))
@@ -611,8 +647,7 @@ def generate_receipt_pdf(transaction):
     words_data = [[Paragraph(f"<b>Amount in Words:</b> <i>{words}</i>", meta_label)]]
     words_table = Table(words_data, colWidths=[525])
     words_table.setStyle(TableStyle([
-        ('BACKGROUND', (0,0), (-1,-1), colors.HexColor('#F8FAFC')),
-        ('BOX', (0,0), (-1,-1), 0.5, colors.HexColor('#CBD5E1')),
+        ('BOX', (0,0), (-1,-1), 0.75, colors.HexColor('#94A3B8')),
         ('TOPPADDING', (0,0), (-1,-1), 5),
         ('BOTTOMPADDING', (0,0), (-1,-1), 5),
         ('LEFTPADDING', (0,0), (-1,-1), 8),
@@ -640,9 +675,13 @@ def generate_receipt_pdf(transaction):
         Paragraph("<i>This is a computer-generated official payment receipt. No physical signature is required.</i>", statutory_note_style)
     ]))
 
+    # Build with background translucent society watermark on every page
     society_raw_name = society.name if society else "SocietyHub"
+    def wm_callback(c, d):
+        draw_society_watermark(c, d, society_name=society_raw_name)
+
     canvas_maker = get_watermark_canvas_maker(society_raw_name)
-    doc.build(story, canvasmaker=canvas_maker)
+    doc.build(story, canvasmaker=canvas_maker, onFirstPage=wm_callback, onLaterPages=wm_callback)
     buffer.seek(0)
     return buffer
 
@@ -835,7 +874,22 @@ def execute_auto_dispatch_for_society(society, ref_date=None, force=False):
         ).exclude(billing_period=period_label)
         arrears = sum(b.amount for b in prev_unpaid) if prev_unpaid.exists() else Decimal('0')
         interest = (arrears * Decimal('0.21')) if arrears > 0 else Decimal('0')
-        grand_total = subtotal + arrears + interest
+
+        # Look for unadjusted advance payments / custom dues paid in advance
+        from django.db.models import Q
+        advance_payments = PaymentTransaction.objects.filter(
+            user=user_prof.user,
+            society=society,
+            status='success',
+            is_advance_adjusted=False
+        ).filter(
+            Q(bill_number__isnull=True) | Q(bill_number='')
+        )
+        advance_credit = sum((b.amount for b in advance_payments), Decimal('0.00'))
+
+        gross_total = subtotal + arrears + interest
+        applied_advance = min(advance_credit, gross_total)
+        grand_total = max(Decimal('0.00'), gross_total - applied_advance)
 
         last_bill_seq += 1
         bill_no_str = str(last_bill_seq)
@@ -847,12 +901,19 @@ def execute_auto_dispatch_for_society(society, ref_date=None, force=False):
             desc_parts.append(f"Flat: {user_prof.wing or ''}-{user_prof.flat_number or ''}")
         desc_parts.append(f"({sqft} sq.ft)")
 
+        tx_status = 'pending'
+        tx_receipt_number = None
+        if grand_total == Decimal('0.00') and applied_advance > 0:
+            tx_status = 'success'
+            tx_receipt_number = PaymentTransaction.generate_receipt_number()
+
         tx = PaymentTransaction.objects.create(
             user=user_prof.user,
             society=society,
             payment_type='maintenance',
             amount=grand_total,
             subtotal_amount=subtotal,
+            advance_amount=applied_advance,
             arrears_amount=arrears,
             interest_amount=interest,
             bill_number=bill_no_str,
@@ -860,9 +921,13 @@ def execute_auto_dispatch_for_society(society, ref_date=None, force=False):
             due_date=due_date,
             billing_period=period_label,
             breakdown_json=json.dumps(particulars_list),
-            status='pending',
+            status=tx_status,
+            receipt_number=tx_receipt_number,
             remarks=" | ".join(desc_parts)
         )
+
+        if applied_advance > 0:
+            advance_payments.update(is_advance_adjusted=True)
         created_count += 1
         total_amount += grand_total
 

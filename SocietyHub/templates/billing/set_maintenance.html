@@ -533,6 +533,10 @@
                             <span class="font-bold text-sm" id="subtotalDisplay">₹0.00</span>
                         </div>
                         <div class="flex justify-between items-center border-b border-white/10 pb-2">
+                            <span class="text-xs text-emerald-200">Total Advance Credits:</span>
+                            <span class="font-bold text-sm text-emerald-300 font-mono" id="totalAdvanceDisplay">-₹0.00</span>
+                        </div>
+                        <div class="flex justify-between items-center border-b border-white/10 pb-2">
                             <span class="text-xs text-white/80">Total Arrears & Interest:</span>
                             <span class="font-bold text-sm text-amber-300" id="totalArrearsDisplay">₹0.00</span>
                         </div>
@@ -588,6 +592,7 @@
                             <th class="py-3 px-3">Flat Designation</th>
                             <th class="py-3 px-3">Area (SQFT)</th>
                             <th class="py-3 px-3">Bill Subtotal (₹)</th>
+                            <th class="py-3 px-3">Advance Credit (₹)</th>
                             <th class="py-3 px-3">Arrears (₹)</th>
                             <th class="py-3 px-3">Interest 21% (₹)</th>
                             <th class="py-3 px-3 text-right">Grand Total (₹)</th>
@@ -630,13 +635,18 @@
                                     class="subtotal-input w-24 px-2 py-1.5 bg-portal-bg border border-portal-border rounded-lg text-xs font-bold text-portal-text text-right">
                             </td>
                             <td class="py-3.5 px-3">
+                                <input type="number" step="0.01" min="0" name="advance_{{ p.user.id }}" id="advance_{{ p.user.id }}" data-user-id="{{ p.user.id }}"
+                                    value="{{ p.pending_advance|default:'0.00'|stringformat:'.2f' }}" oninput="handleAdvanceChange(this)"
+                                    class="advance-input w-24 px-2 py-1.5 bg-emerald-50/50 border border-emerald-200 rounded-lg text-xs font-semibold text-emerald-900 text-right">
+                            </td>
+                            <td class="py-3.5 px-3">
                                 <input type="number" step="0.01" min="0" name="arrears_{{ p.user.id }}" id="arrears_{{ p.user.id }}" data-user-id="{{ p.user.id }}"
-                                    value="0.00" oninput="handleArrearsChange(this)"
+                                    value="{{ p.pending_arrears|default:'0.00'|stringformat:'.2f' }}" oninput="handleArrearsChange(this)"
                                     class="arrears-input w-24 px-2 py-1.5 bg-amber-50/50 border border-amber-200 rounded-lg text-xs font-semibold text-amber-900 text-right">
                             </td>
                             <td class="py-3.5 px-3">
                                 <input type="number" step="0.01" min="0" name="interest_{{ p.user.id }}" id="interest_{{ p.user.id }}" data-user-id="{{ p.user.id }}"
-                                    value="0.00" oninput="handleInterestChange(this)"
+                                    value="{{ p.pending_interest|default:'0.00'|stringformat:'.2f' }}" oninput="handleInterestChange(this)"
                                     class="interest-input w-20 px-2 py-1.5 bg-amber-50/50 border border-amber-200 rounded-lg text-xs font-semibold text-amber-900 text-right">
                             </td>
                             <td class="py-3.5 px-3 text-right">
@@ -645,7 +655,7 @@
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="9" class="py-12 text-center text-portal-muted">
+                            <td colspan="10" class="py-12 text-center text-portal-muted">
                                 <p class="font-bold text-sm">No eligible resident units found.</p>
                                 <p class="text-xs mt-1">Approve residents in the Approvals panel first to generate maintenance bills for them.</p>
                             </td>
@@ -844,18 +854,28 @@
         updateTotals();
     }
 
+    function handleAdvanceChange(el) {
+        const userId = typeof el === 'object' && el.dataset ? el.dataset.userId : el;
+        updateGrandTotalForRow(userId);
+        updateTotals();
+    }
+
     function updateGrandTotalForRow(userIdOrEl) {
         const userId = typeof userIdOrEl === 'object' && userIdOrEl.dataset ? userIdOrEl.dataset.userId : userIdOrEl;
         const amountInput = document.getElementById('amount_' + userId);
+        const advanceInput = document.getElementById('advance_' + userId);
         const arrearsInput = document.getElementById('arrears_' + userId);
         const interestInput = document.getElementById('interest_' + userId);
         const grandDisplay = document.getElementById('grand_display_' + userId);
 
         if (amountInput && arrearsInput && interestInput && grandDisplay) {
             const subtotal = parseFloat(amountInput.value) || 0;
+            const advance = parseFloat(advanceInput ? advanceInput.value : 0) || 0;
             const arrears = parseFloat(arrearsInput.value) || 0;
             const interest = parseFloat(interestInput.value) || 0;
-            const total = subtotal + arrears + interest;
+            const gross = subtotal + arrears + interest;
+            const appliedAdvance = Math.min(advance, gross);
+            const total = Math.max(0, gross - appliedAdvance);
             grandDisplay.innerText = '₹' + total.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         }
     }
@@ -1009,6 +1029,7 @@
         const checkboxes = document.querySelectorAll('.resident-checkbox');
         let selectedCount = 0;
         let grandSubtotal = 0;
+        let grandAdvance = 0;
         let grandArrears = 0;
         let totalPayable = 0;
 
@@ -1017,22 +1038,30 @@
                 selectedCount++;
                 const userId = cb.value;
                 const amountInput = document.getElementById('amount_' + userId);
+                const advanceInput = document.getElementById('advance_' + userId);
                 const arrearsInput = document.getElementById('arrears_' + userId);
                 const interestInput = document.getElementById('interest_' + userId);
 
                 const subtotal = amountInput ? (parseFloat(amountInput.value) || 0) : 0;
+                const advance = advanceInput ? (parseFloat(advanceInput.value) || 0) : 0;
                 const arrears = arrearsInput ? (parseFloat(arrearsInput.value) || 0) : 0;
                 const interest = interestInput ? (parseFloat(interestInput.value) || 0) : 0;
 
+                const gross = subtotal + arrears + interest;
+                const appliedAdv = Math.min(advance, gross);
+
                 grandSubtotal += subtotal;
+                grandAdvance += appliedAdv;
                 grandArrears += (arrears + interest);
-                totalPayable += (subtotal + arrears + interest);
+                totalPayable += Math.max(0, gross - appliedAdv);
             }
         });
 
         const totalResidents = checkboxes.length;
         document.getElementById('selectedCountDisplay').innerText = `${selectedCount} / ${totalResidents}`;
         document.getElementById('subtotalDisplay').innerText = `₹${grandSubtotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        const advEl = document.getElementById('totalAdvanceDisplay');
+        if (advEl) advEl.innerText = `-₹${grandAdvance.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
         document.getElementById('totalArrearsDisplay').innerText = `₹${grandArrears.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
         document.getElementById('grandTotalDisplay').innerText = `₹${totalPayable.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     }

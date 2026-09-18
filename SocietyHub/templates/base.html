@@ -40,9 +40,46 @@
             }
         }
     </script>
+    <link rel="stylesheet" href="/static/css/loader.css">
+    <script src="/static/js/loader.js"></script>
     {% block extra_head %}{% endblock %}
 </head>
 <body class="h-full font-sans text-portal-text bg-portal-bg flex overflow-hidden">
+    <!-- Global Progress Bar & Centered Loading Screen -->
+    <div id="societyhub-progress-bar"></div>
+    <div id="societyhub-global-loader" aria-hidden="true">
+        <div id="societyhub-loader-card" class="flex flex-col items-center">
+            <div class="societyhub-spinner-ring">
+                <div class="societyhub-spinner-pulse"></div>
+                <div class="societyhub-spinner-track"></div>
+                <div class="societyhub-spinner-blade"></div>
+                <div class="societyhub-spinner-core">
+                    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/>
+                        <path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/>
+                        <path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/>
+                        <path d="M10 6h4"/>
+                        <path d="M10 10h4"/>
+                        <path d="M10 14h4"/>
+                        <path d="M10 18h4"/>
+                    </svg>
+                </div>
+            </div>
+            <div class="space-y-1 text-center">
+                <h3 id="societyhub-loader-title" class="text-sm font-bold text-slate-800 tracking-tight">
+                    Opening...
+                </h3>
+                <p id="societyhub-loader-subtitle" class="text-xs text-slate-500 font-medium flex items-center justify-center">
+                    <span>Please wait</span>
+                    <span class="inline-flex items-center ml-1">
+                        <span class="loader-dot"></span>
+                        <span class="loader-dot"></span>
+                        <span class="loader-dot"></span>
+                    </span>
+                </p>
+            </div>
+        </div>
+    </div>
     <!-- Server-Side & Client-Side Toast Notification Container -->
     <div id="toast-container" class="fixed top-4 right-4 z-[9999] flex flex-col gap-2 pointer-events-none max-w-sm w-full px-4 sm:px-0">
         {% if messages %}

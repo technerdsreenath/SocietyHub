@@ -10,6 +10,7 @@ from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse, JsonResponse, FileResponse, Http404
 from django.contrib import messages
 from django.conf import settings
+from django.db.models import Q
 from django.views.decorators.csrf import csrf_exempt
 from .models import PaymentTransaction, AuditReport
 from .forms import AuditReportUploadForm
@@ -664,9 +665,18 @@ def set_maintenance_view(request):
             except Exception:
                 interest = Decimal('0')
 
-            grand_total = subtotal + arrears + interest
+            # Advance / pre-paid credit deduction
+            advance_input = request.POST.get(f"advance_{u_id}", '0').strip()
+            try:
+                advance = Decimal(advance_input) if advance_input else Decimal('0')
+            except Exception:
+                advance = Decimal('0')
 
-            if grand_total <= Decimal('0'):
+            gross_total = subtotal + arrears + interest
+            applied_advance = min(advance, gross_total)
+            grand_total = max(Decimal('0.00'), gross_total - applied_advance)
+
+            if gross_total <= Decimal('0'):
                 continue
 
             last_bill_seq += 1
@@ -679,12 +689,19 @@ def set_maintenance_view(request):
                 desc_parts.append(f"Flat: {user_prof.wing or ''}-{user_prof.flat_number or ''}")
             desc_parts.append(f"({user_prof.area_sqft or 850} sq.ft)")
 
+            tx_status = 'pending'
+            tx_receipt_number = None
+            if grand_total == Decimal('0.00') and applied_advance > 0:
+                tx_status = 'success'
+                tx_receipt_number = PaymentTransaction.generate_receipt_number()
+
             tx = PaymentTransaction.objects.create(
                 user=user_prof.user,
                 society=profile.society,
                 payment_type='maintenance',
                 amount=grand_total,
                 subtotal_amount=subtotal,
+                advance_amount=applied_advance,
                 arrears_amount=arrears,
                 interest_amount=interest,
                 bill_number=bill_no_str,
@@ -692,9 +709,22 @@ def set_maintenance_view(request):
                 due_date=due_date,
                 billing_period=billing_period,
                 breakdown_json=json.dumps(particulars_list),
-                status='pending',
+                status=tx_status,
+                receipt_number=tx_receipt_number,
                 remarks=" | ".join(desc_parts)
             )
+
+            # Mark unadjusted advance payments as adjusted if advance credit was applied
+            if applied_advance > 0:
+                PaymentTransaction.objects.filter(
+                    user=user_prof.user,
+                    society=profile.society,
+                    status='success',
+                    is_advance_adjusted=False
+                ).filter(
+                    Q(bill_number__isnull=True) | Q(bill_number='')
+                ).update(is_advance_adjusted=True)
+
             created_count += 1
             total_amount += grand_total
 
@@ -708,7 +738,29 @@ def set_maintenance_view(request):
             request,
             f"Successfully generated and dispatched {created_count} maintenance bills totaling ₹{total_amount:,.2f} for {profile.society.name}."
         )
-        return redirect('billing_home')
+    # Pre-calculate outstanding arrears, statutory interest, and unadjusted advance payments for each resident
+    for p in eligible_profiles:
+        pending_bills = PaymentTransaction.objects.filter(
+            user=p.user,
+            society=profile.society,
+            payment_type='maintenance',
+            status='pending'
+        )
+        arrears_sum = sum((b.amount for b in pending_bills), Decimal('0.00'))
+        p.pending_arrears = arrears_sum
+        p.pending_interest = (arrears_sum * Decimal('0.21') * Decimal('0.25')).quantize(Decimal('0.01')) if arrears_sum > 0 else Decimal('0.00')
+
+        # Find unadjusted advance payments or custom dues paid in advance
+        advance_payments = PaymentTransaction.objects.filter(
+            user=p.user,
+            society=profile.society,
+            status='success',
+            is_advance_adjusted=False
+        ).filter(
+            Q(bill_number__isnull=True) | Q(bill_number='')
+        )
+        advance_sum = sum((b.amount for b in advance_payments), Decimal('0.00'))
+        p.pending_advance = advance_sum
 
     return render(request, 'billing/set_maintenance.html', {
         'profile': profile,

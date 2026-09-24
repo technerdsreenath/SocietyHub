@@ -330,5 +330,5 @@ Contributions, feedback, and feature suggestions are welcome!
 ---
 
 <p align="center">
-  Built with ❤️ for hassle-free housing society governance.
+  Built with ❤️ by Sreenath Nair for hassle-free housing society governance.
 </p>

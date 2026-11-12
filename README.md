@@ -7,10 +7,25 @@
 
 [![Django](https://img.shields.io/badge/Django-4.2+-092E20?style=for-the-badge&logo=django&logoColor=white)](https://www.djangoproject.com/)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-14%2B-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Supabase-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)](https://supabase.com/)
+[![Render](https://img.shields.io/badge/Hosted%20On-Render-46E3B7?style=for-the-badge&logo=render&logoColor=white)](https://societyhub-oxsr.onrender.com/)
 [![Razorpay](https://img.shields.io/badge/Razorpay-Payment%20Gateway-02042B?style=for-the-badge&logo=razorpay&logoColor=3395FF)](https://razorpay.com/)
 [![PWA Ready](https://img.shields.io/badge/PWA-Ready-5A0FC8?style=for-the-badge&logo=pwa&logoColor=white)](#-progressive-web-app-pwa--push-notifications)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
+
+---
+
+## 🌐 Live Deployment
+
+| Attribute | Details |
+|---|---|
+| **Live App URL** | **[https://societyhub-oxsr.onrender.com](https://societyhub-oxsr.onrender.com/)** |
+| **Login Portal** | **[https://societyhub-oxsr.onrender.com/users/login/](https://societyhub-oxsr.onrender.com/users/login/)** |
+| **Hosting Platform** | [Render](https://render.com) (Free Web Service) |
+| **Cloud Database** | [Supabase](https://supabase.com) (Managed Cloud PostgreSQL) |
+| **WSGI Server** | [Gunicorn](https://gunicorn.org/) (Production Python HTTP Server) |
+| **Static File Engine**| [WhiteNoise](https://whitenoise.readthedocs.io/) (Compressed Manifest Storage) |
+| **CI/CD Pipeline** | Automated continuous deployment via GitHub (`build.sh`) |
 
 ---
 
@@ -104,6 +119,7 @@ graph TD
 ```
 SocietyHub_project/
 ├── manage.py                     # Django management script
+├── build.sh                      # Render automated build & migration script
 ├── requirements.txt              # Production & dev dependencies
 ├── .env.example                  # Environment variable blueprint
 ├── README.md                     # Project documentation
@@ -150,13 +166,16 @@ SocietyHub_project/
 
 | Domain | Technology |
 |---|---|
+| **Live Hosting** | [Render](https://render.com) (Automated CI/CD Web Service) |
 | **Backend Framework** | [Django 4.2+ (Python 3.10+)](https://www.djangoproject.com/) |
-| **Database** | [PostgreSQL](https://www.postgresql.org/) (Production-ready with SSL support) / SQLite (Local Dev) |
+| **WSGI HTTP Server** | [Gunicorn 21+](https://gunicorn.org/) |
+| **Static Files Engine**| [WhiteNoise](https://whitenoise.readthedocs.io/) (Compressed Manifest Storage) |
+| **Database** | [Supabase PostgreSQL](https://supabase.com/) (Production) / SQLite (Local Dev) |
 | **Payment Gateway** | [Razorpay Python SDK](https://razorpay.com/) |
 | **Push Notifications** | Web Push Protocol (VAPID) via [pywebpush](https://github.com/web-push-libs/pywebpush) |
 | **Frontend & UI** | Semantic HTML5, Vanilla JavaScript, Tailwind CSS utility system |
 | **PWA Layer** | Service Workers (`sw.js`), Web App Manifest (`manifest.json`), Offline Fallback |
-| **Document Engine** | Dynamic HTML printable views / PDF generation for receipts and bills |
+| **Document Engine** | [ReportLab](https://www.reportlab.com/) for official statutory PDF invoices and receipts |
 
 ---
 
@@ -261,6 +280,21 @@ Follow the interactive prompts to set an admin username, email, and password.
 python manage.py runserver
 ```
 Visit **`http://127.0.0.1:8000/`** in your browser.
+
+---
+
+## 🚀 Production Deployment on Render
+
+This project is pre-configured for automated continuous deployment on [Render](https://render.com) with **Supabase PostgreSQL** and **Gunicorn**:
+
+1. **Repository Link:** Connect your GitHub repository to a new **Render Web Service**.
+2. **Build & Start Commands:**
+   - **Build Command:** `./build.sh` (Installs dependencies, collects static assets via WhiteNoise, runs migrations)
+   - **Start Command:** `gunicorn SocietyHub.wsgi:application`
+3. **Environment Configuration:**
+   Add your production variables (`DEBUG=False`, `ALLOWED_HOSTS=*`, `DB_HOST`, `DB_USER`, `DB_PASSWORD`, `SECRET_KEY`, Razorpay, and Gmail SMTP keys) in the Render dashboard.
+4. **Continuous Deployment:**
+   Every push to `main` automatically triggers a zero-downtime build and deployment cycle.
 
 ---
 

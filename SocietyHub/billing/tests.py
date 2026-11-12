@@ -134,14 +134,14 @@ class AuditReportTests(TestCase):
         self.assertContains(resp, "Greenwood Audit FY 2025")
         self.assertContains(resp, "2024-2025")
         # Resident should not see delete button
-        self.assertNotContains(resp, "delete_audit_report")
+        self.assertNotContains(resp, reverse('delete_audit_report', args=[self.report1.id]))
 
     def test_chairperson_sees_upload_and_delete_controls(self):
         self.client.login(username="chair1", password="password123")
         resp = self.client.get(reverse('audit_reports_list'))
         self.assertEqual(resp.status_code, 200)
         self.assertContains(resp, "Upload Audit Report")
-        self.assertContains(resp, "delete_audit_report")
+        self.assertContains(resp, reverse('delete_audit_report', args=[self.report1.id]))
 
     def test_society_isolation_in_listing(self):
         # Resident of society 2 should NOT see Society 1's report
@@ -155,7 +155,8 @@ class AuditReportTests(TestCase):
         resp = self.client.get(reverse('download_audit_report', args=[self.report1.id]))
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(resp['Content-Type'], 'application/pdf')
-        self.assertIn(b'%PDF-1.4 dummy audit report content', resp.content)
+        content = b''.join(resp.streaming_content)
+        self.assertIn(b'%PDF-1.4 dummy audit report content', content)
 
     def test_cross_society_download_is_blocked(self):
         # Resident of society 2 attempting to download Society 1's report gets 404

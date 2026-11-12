@@ -344,7 +344,7 @@ def notifications_poll_api(request):
     latest_id = latest_obj.id if latest_obj else 0
 
     new_items = []
-    if since_id > 0:
+    if 'since_id' in request.GET and since_id >= 0:
         new_qs = qs.filter(id__gt=since_id).order_by('id')
         new_items = [serialize_notification(n) for n in new_qs]
 
